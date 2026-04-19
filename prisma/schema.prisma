@@ -1,0 +1,232 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  name             String
+  avatarUrl        String?
+  stripeCustomerId String?
+  stripeAccountId  String?
+  ratingAvg        Float?
+  ratingCount      Int       @default(0)
+  isBanned         Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tickets         Ticket[]
+  claims          Claim[]
+  sentMessages    Message[]
+  ownerThreads    MessageThread[]  @relation("ThreadOwner")
+  finderThreads   MessageThread[]  @relation("ThreadFinder")
+  transactions    Transaction[]
+  openedDisputes  Dispute[]        @relation("DisputeOpener")
+  givenRatings    Rating[]         @relation("RatingGiver")
+  receivedRatings Rating[]         @relation("RatingReceiver")
+  notifications   Notification[]
+
+  @@map("users")
+}
+
+enum TicketStatus {
+  active
+  found
+  resolved
+  expired
+  cancelled
+  disputed
+}
+
+enum ItemCategory {
+  water_bottle
+  phone
+  wallet
+  keys
+  clothing
+  bag
+  electronics
+  book
+  id_card
+  headphones
+  charger
+  other
+}
+
+model Ticket {
+  id                    String       @id @default(uuid())
+  ownerId               String
+  owner                 User         @relation(fields: [ownerId], references: [id])
+  status                TicketStatus @default(active)
+  category              ItemCategory
+  description           String
+  generalArea           String
+  lostAt                DateTime
+  referencePhotoUrl     String?
+  bountyAmountCents     Int
+  stripePaymentIntentId String?
+  approvedClaimId       String?      @unique
+  approvedClaim         Claim?       @relation("ApprovedClaim", fields: [approvedClaimId], references: [id])
+  filedAt               DateTime     @default(now())
+  expiresAt             DateTime
+  resolvedAt            DateTime?
+  createdAt             DateTime     @default(now())
+
+  claims       Claim[]       @relation("TicketClaims")
+  transactions Transaction[]
+
+  @@map("tickets")
+}
+
+enum ClaimStatus {
+  pending_review
+  approved
+  rejected
+  completed
+  disputed
+  cancelled
+}
+
+model Claim {
+  id               String      @id @default(uuid())
+  ticketId         String
+  ticket           Ticket      @relation("TicketClaims", fields: [ticketId], references: [id])
+  finderId         String
+  finder           User        @relation(fields: [finderId], references: [id])
+  status           ClaimStatus @default(pending_review)
+  proofPhotoUrls   String[]
+  foundLocation    String
+  foundLocationLat Float?
+  foundLocationLng Float?
+  finderNote       String?
+  foundAt          DateTime    @default(now())
+  approvedAt       DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime    @default(now())
+
+  approvedForTicket Ticket?        @relation("ApprovedClaim")
+  thread            MessageThread?
+  transactions      Transaction[]
+  dispute           Dispute?
+  ratings           Rating[]
+
+  @@unique([ticketId, finderId])
+  @@map("claims")
+}
+
+model MessageThread {
+  id        String   @id @default(uuid())
+  claimId   String   @unique
+  claim     Claim    @relation(fields: [claimId], references: [id])
+  ownerId   String
+  owner     User     @relation("ThreadOwner", fields: [ownerId], references: [id])
+  finderId  String
+  finder    User     @relation("ThreadFinder", fields: [finderId], references: [id])
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+
+  messages Message[]
+
+  @@map("message_threads")
+}
+
+model Message {
+  id        String        @id @default(uuid())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id])
+  senderId  String
+  sender    User          @relation(fields: [senderId], references: [id])
+  body      String
+  isRead    Boolean       @default(false)
+  createdAt DateTime      @default(now())
+
+  @@map("messages")
+}
+
+enum TransactionType {
+  escrow_hold
+  payout_finder
+  platform_fee
+  refund
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+}
+
+model Transaction {
+  id               String            @id @default(uuid())
+  ticketId         String
+  ticket           Ticket            @relation(fields: [ticketId], references: [id])
+  claimId          String?
+  claim            Claim?            @relation(fields: [claimId], references: [id])
+  userId           String
+  user             User              @relation(fields: [userId], references: [id])
+  type             TransactionType
+  amountCents      Int
+  stripeTransferId String?
+  status           TransactionStatus @default(pending)
+  createdAt        DateTime          @default(now())
+
+  @@map("transactions")
+}
+
+enum DisputeStatus {
+  open
+  resolved_upheld
+  resolved_reversed
+  resolved_cancelled
+}
+
+model Dispute {
+  id         String        @id @default(uuid())
+  claimId    String        @unique
+  claim      Claim         @relation(fields: [claimId], references: [id])
+  openedById String
+  openedBy   User          @relation("DisputeOpener", fields: [openedById], references: [id])
+  reason     String
+  resolution String?
+  status     DisputeStatus @default(open)
+  createdAt  DateTime      @default(now())
+  resolvedAt DateTime?
+
+  @@map("disputes")
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  claimId   String
+  claim     Claim    @relation(fields: [claimId], references: [id])
+  raterId   String
+  rater     User     @relation("RatingGiver", fields: [raterId], references: [id])
+  ratedId   String
+  rated     User     @relation("RatingReceiver", fields: [ratedId], references: [id])
+  score     Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@unique([claimId, raterId])
+  @@map("ratings")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  body      String
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
