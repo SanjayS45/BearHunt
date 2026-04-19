@@ -19,40 +19,62 @@ export async function POST(request: Request) {
   switch (event.type) {
     case 'payment_intent.succeeded': {
       const pi = event.data.object
-      if (pi.metadata?.type === 'bounty_escrow') {
-        const ticket = await prisma.ticket.findFirst({ where: { stripePaymentIntentId: pi.id } })
-        if (ticket) {
-          await prisma.transaction.create({
-            data: {
-              ticketId: ticket.id,
-              userId: ticket.ownerId,
-              type: 'escrow_hold',
-              amountCents: pi.amount,
-              status: 'completed',
-            },
+      // Handle successful bounty capture (triggered from confirm-receipt)
+      if (pi.metadata?.type === 'bounty_capture') {
+        const ticketId = pi.metadata.ticketId
+        const claimId = pi.metadata.claimId
+        if (ticketId && claimId) {
+          // Idempotent: only create if not already recorded
+          const existing = await prisma.transaction.findFirst({
+            where: { ticketId, type: 'escrow_hold' },
           })
+          if (!existing) {
+            const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } })
+            if (ticket) {
+              await prisma.transaction.create({
+                data: {
+                  ticketId,
+                  claimId,
+                  userId: ticket.ownerId,
+                  type: 'escrow_hold',
+                  amountCents: pi.amount,
+                  status: 'completed',
+                },
+              })
+            }
+          }
         }
       }
       break
     }
     case 'payment_intent.payment_failed': {
       const pi = event.data.object
-      const ticket = await prisma.ticket.findFirst({ where: { stripePaymentIntentId: pi.id } })
-      if (ticket && ticket.status === 'active') {
-        await prisma.ticket.update({ where: { id: ticket.id }, data: { status: 'cancelled' } })
+      if (pi.metadata?.type === 'bounty_capture') {
+        const ticketId = pi.metadata.ticketId
+        if (ticketId) {
+          // Revert ticket back to found so owner can retry confirmation
+          await prisma.ticket.update({
+            where: { id: ticketId },
+            data: { status: 'found' },
+          })
+        }
       }
       break
     }
     case 'charge.refunded': {
       const charge = event.data.object
-      const pi = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
+      const pi = typeof charge.payment_intent === 'string'
+        ? charge.payment_intent
+        : charge.payment_intent?.id
       if (pi) {
-        const ticket = await prisma.ticket.findFirst({ where: { stripePaymentIntentId: pi } })
-        if (ticket) {
+        const tx = await prisma.transaction.findFirst({
+          where: { stripeTransferId: pi },
+        })
+        if (tx) {
           await prisma.transaction.create({
             data: {
-              ticketId: ticket.id,
-              userId: ticket.ownerId,
+              ticketId: tx.ticketId,
+              userId: tx.userId,
               type: 'refund',
               amountCents: charge.amount_refunded,
               status: 'completed',

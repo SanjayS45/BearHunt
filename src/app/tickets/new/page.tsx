@@ -174,6 +174,7 @@ export default function NewTicketPage() {
               placeholder="e.g. Dwinelle Hall"
             />
 
+
             <div>
               <Label htmlFor="lostAt">When did you lose it? <span className="text-danger">*</span></Label>
               <Input

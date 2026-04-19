@@ -14,6 +14,8 @@ export default function ClaimPage({ params }: { params: Promise<{ id: string }> 
   const [photos, setPhotos] = useState<string[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [location, setLocation] = useState('')
+  const [locationLat, setLocationLat] = useState<number | undefined>()
+  const [locationLng, setLocationLng] = useState<number | undefined>()
   const [note, setNote] = useState('')
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -54,7 +56,7 @@ export default function ClaimPage({ params }: { params: Promise<{ id: string }> 
     const res = await fetch(`/api/tickets/${id}/claims`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ proofPhotoUrls: photos, foundLocation: location, finderNote: note || undefined }),
+      body: JSON.stringify({ proofPhotoUrls: photos, foundLocation: location, foundLocationLat: locationLat, foundLocationLng: locationLng, finderNote: note || undefined }),
     })
     const data = await res.json()
     if (res.ok) {
@@ -102,7 +104,7 @@ export default function ClaimPage({ params }: { params: Promise<{ id: string }> 
         <LocationInput
           label="Where did you find it? *"
           value={location}
-          onChange={setLocation}
+          onChange={(v, lat, lng) => { setLocation(v); setLocationLat(lat); setLocationLng(lng) }}
           placeholder="e.g. Dwinelle Hall, under a desk in Room 155"
         />
 

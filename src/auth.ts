@@ -13,6 +13,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ profile }) {
       if (!profile?.email?.endsWith('@berkeley.edu')) return false
+      const existing = await prisma.user.findUnique({
+        where: { email: profile.email },
+        select: { isBanned: true },
+      })
+      if (existing?.isBanned) return false
       await prisma.user.upsert({
         where: { email: profile.email },
         update: {

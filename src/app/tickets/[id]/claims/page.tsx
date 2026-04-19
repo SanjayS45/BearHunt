@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/StatusBadge'
 import { BountyBadge } from '@/components/BountyBadge'
 import { ClaimActions } from '@/components/ClaimActions'
+import { MapView } from '@/components/MapView'
 
 export default async function ClaimsReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -68,10 +69,18 @@ export default async function ClaimsReviewPage({ params }: { params: Promise<{ i
                   <span className="text-xs text-fog">{formatDistanceToNow(new Date(claim.foundAt), { addSuffix: true })}</span>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-sm text-slate">
-                  <MapPin size={14} strokeWidth={1.5} className="text-fog" />
-                  {claim.foundLocation}
-                </div>
+                {claim.foundLocationLat && claim.foundLocationLng ? (
+                  <MapView
+                    lat={claim.foundLocationLat}
+                    lng={claim.foundLocationLng}
+                    label={claim.foundLocation}
+                  />
+                ) : (
+                  <div className="flex items-center gap-1.5 text-sm text-slate">
+                    <MapPin size={14} strokeWidth={1.5} className="text-fog" />
+                    {claim.foundLocation}
+                  </div>
+                )}
 
                 {claim.finderNote && (
                   <p className="text-sm text-slate italic">&ldquo;{claim.finderNote}&rdquo;</p>
