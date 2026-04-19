@@ -657,12 +657,132 @@ Everything public, plus:
 
 ### 12.3 Design Principles
 
-- Mobile-first (students will use this on their phones while walking around campus)
-- Scavenger-hunt feel: bounty board with prominent bounty amounts, gamified visual elements
-- Minimal clicks to file a ticket (target: under 2 minutes including payment)
-- Minimal clicks to claim a bounty (target: under 1 minute — snap photos, pin location, submit)
-- Clear visual feedback on ticket and claim status
-- Cal-themed color palette (Berkeley Blue #003262, California Gold #FDB515)
+**Philosophy:** The app should feel **simple, clean, and unmistakably Berkeley**. A student should be able to glance at any screen and know exactly what to do next without reading instructions. No visual clutter, no unnecessary animations, no dark patterns. Think "campus bulletin board meets clean mobile app."
+
+**Core principles:**
+
+- **Mobile-first** — students will use this on their phones while walking around campus. Desktop is secondary.
+- **Scavenger-hunt feel** — bounty board with prominent bounty amounts, large category icons, subtle gamification (but never gimmicky).
+- **Minimal clicks** — file a ticket in under 2 minutes including payment; claim a bounty in under 1 minute (snap photos, pin location, submit).
+- **Clear status feedback** — every ticket and claim shows its status prominently with consistent color coding.
+- **Low cognitive load** — one primary action per screen. If a screen has more than two equally-weighted buttons, it needs redesigning.
+
+### 12.4 Visual Design System
+
+#### Color Palette (Cal-themed)
+
+**Primary colors (official Berkeley):**
+
+| Name | Hex | Usage |
+|------|-----|-------|
+| **Berkeley Blue** | `#003262` | Primary brand color. Header background, primary buttons, links, key UI accents. |
+| **California Gold** | `#FDB515` | Secondary brand color. Bounty amount badges, call-to-action highlights, active state indicators. |
+
+**Neutral grays (for text, backgrounds, borders):**
+
+| Name | Hex | Usage |
+|------|-----|-------|
+| **Ink** | `#1A1A1A` | Primary text (headings, body) |
+| **Slate** | `#4A5568` | Secondary text (subtitles, metadata) |
+| **Fog** | `#A0AEC0` | Tertiary text (timestamps, helper text) |
+| **Mist** | `#E2E8F0` | Borders, dividers |
+| **Snow** | `#F7FAFC` | Page background |
+| **White** | `#FFFFFF` | Card backgrounds, modal backgrounds |
+
+**Semantic colors (status + feedback):**
+
+| Name | Hex | Usage |
+|------|-----|-------|
+| **Success Green** | `#10B981` | Approved claims, "Resolved" status, success toasts |
+| **Warning Amber** | `#F59E0B` | Pending review, expiring soon warnings |
+| **Error Red** | `#EF4444` | Rejected claims, disputes, error toasts |
+| **Info Blue** | `#3B82F6` | Neutral informational states, "new" badges |
+
+**Status color mapping:**
+
+| Status | Color |
+|--------|-------|
+| `active` (ticket) | Berkeley Blue |
+| `found` (ticket) | Warning Amber |
+| `resolved` (ticket) | Success Green |
+| `expired` / `cancelled` | Fog (grayed out) |
+| `disputed` | Error Red |
+| `pending_review` (claim) | Warning Amber |
+| `approved` (claim) | Success Green |
+| `rejected` (claim) | Error Red |
+
+**Bounty badge color tiers (reinforces the scavenger-hunt feel):**
+
+| Bounty Range | Badge Color |
+|--------------|-------------|
+| $2–$5 | Success Green |
+| $5.01–$15 | Warning Amber |
+| $15.01+ | California Gold (with subtle glowing border) |
+
+#### Typography
+
+- **Font family:** Inter (Google Fonts) — clean, highly legible, zero personality, perfect for utilitarian apps.
+- **Headings:** Inter Semibold (600), tight line height (1.2)
+- **Body:** Inter Regular (400), relaxed line height (1.5)
+- **Buttons/labels:** Inter Medium (500), sentence case (never ALL CAPS)
+- **Bounty amounts:** Inter Bold (700), larger size (28–36px on cards) — these are the hero element
+- **Scale (mobile → desktop):**
+  - H1: 24px → 32px
+  - H2: 20px → 24px
+  - H3: 16px → 18px
+  - Body: 15px → 16px
+  - Small: 13px → 14px
+
+#### Spacing & Layout
+
+- **Base unit:** 4px. All spacing is a multiple of 4 (4, 8, 12, 16, 24, 32, 48, 64).
+- **Card padding:** 16px on mobile, 24px on desktop.
+- **Page gutters:** 16px on mobile, 32px on desktop. Max content width 640px on phones, 1120px on desktop.
+- **Vertical rhythm:** 16px between related elements, 32px between sections.
+
+#### Component Styling
+
+- **Borders:** 1px Mist (`#E2E8F0`) for all cards, inputs, and dividers. Never use box-shadows as dividers.
+- **Corner radius:** 8px for cards and buttons, 12px for modals, 4px for inputs and badges. Never sharp corners.
+- **Elevation:** Avoid heavy drop shadows. Use a single subtle shadow (`0 1px 3px rgba(0,0,0,0.06)`) only on floating elements (modals, dropdowns). Cards on the bounty board are flat (border only).
+- **Buttons:**
+  - **Primary:** Berkeley Blue background, white text, hover darkens to `#002347`
+  - **Secondary:** White background, Berkeley Blue border + text, hover fills to `#F0F4F8`
+  - **Destructive:** Error Red background, white text
+  - **Ghost:** Transparent, Slate text, for tertiary actions
+  - Never more than one primary button visible on a screen
+- **Inputs:** White background, Mist border, Berkeley Blue border + subtle blue glow on focus. Labels always above the input (never floating or placeholders-only).
+- **Icons:** Lucide React. Stroke width 1.5. Same size as adjacent text. Never decorative — every icon must reinforce meaning.
+
+#### Illustrations & Imagery
+
+- **No stock photos, no illustrations, no mascots.** The UI is content-first. The only images shown are user-uploaded (proof photos, reference photos) and user avatars.
+- **Category icons:** Single-line Lucide icons only (e.g., `Droplet` for water bottles, `Smartphone` for phones, `Key` for keys). No colored emoji.
+- **Empty states:** A single centered icon (Fog-colored) + one line of text + one primary button. No illustrations.
+
+#### Interaction & Animation
+
+- **Transitions:** 150ms ease-out on hover/focus states. No bouncy or decorative animations.
+- **Loading:** Simple skeleton loaders matching the shape of the content being loaded. No spinners on full-page loads.
+- **Feedback:** Toast notifications (top of screen, auto-dismiss after 3s) for all submit actions. Success = green, error = red, info = blue.
+- **Destructive actions on mobile:** Use bottom sheets, not centered modals (thumb-friendly).
+
+#### Simplicity Rules (hard constraints)
+
+1. **Max two font weights per screen** (e.g., Regular + Semibold).
+2. **Max three colors per screen** beyond neutrals (e.g., Berkeley Blue + California Gold + one status color).
+3. **No gradients.** Solid fills only.
+4. **No icons inside buttons unless the icon is essential** (e.g., "+" on "Post Item"). Text-only buttons by default.
+5. **Bottom tab bar on mobile** (Home, Post, Messages, Dashboard), persistent top header on desktop. Never both.
+6. **No onboarding tour.** The UI should be self-explanatory. If a feature needs explaining, it needs redesigning.
+
+#### Accessibility
+
+- All interactive elements meet WCAG AA contrast ratios (Berkeley Blue on white = 11.5:1, passes).
+- Focus states are always visible (2px Berkeley Blue outline).
+- All form fields have associated labels. All buttons have accessible names.
+- Tap targets are minimum 44×44px on mobile.
+- Supports system dark mode via `prefers-color-scheme` (inverts neutrals, keeps Berkeley Blue and California Gold accents).
 
 ---
 
@@ -744,7 +864,6 @@ Everything public, plus:
 | Monitoring | Vercel Analytics + Sentry | Performance monitoring and error tracking |
 
 **Note:** The Claude API is no longer needed in v2. Verification is handled manually by the owner, not by AI. This simplifies the stack and reduces per-transaction costs.
-
 ---
 
 ## 16. Infrastructure & Deployment
