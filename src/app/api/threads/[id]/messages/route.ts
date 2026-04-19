@@ -8,11 +8,12 @@ import { z } from 'zod'
 
 const sendSchema = z.object({ body: z.string().min(1).max(2000) })
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const thread = await prisma.messageThread.findUnique({ where: { id: params.id } })
+  const { id } = await params
+  const thread = await prisma.messageThread.findUnique({ where: { id } })
   if (!thread) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const isParticipant = thread.ownerId === session.user.id || thread.finderId === session.user.id
@@ -23,28 +24,28 @@ export async function GET(request: Request, { params }: { params: { id: string }
   const limit = 50
 
   const messages = await prisma.message.findMany({
-    where: { threadId: params.id },
+    where: { threadId: id },
     include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
     orderBy: { createdAt: 'asc' },
     skip: (page - 1) * limit,
     take: limit,
   })
 
-  // Mark unread messages as read
   await prisma.message.updateMany({
-    where: { threadId: params.id, senderId: { not: session.user.id }, isRead: false },
+    where: { threadId: id, senderId: { not: session.user.id }, isRead: false },
     data: { isRead: true },
   })
 
   return NextResponse.json({ messages })
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { id } = await params
   const thread = await prisma.messageThread.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       owner: { select: { id: true, name: true, email: true } },
       finder: { select: { id: true, name: true, email: true } },
@@ -67,7 +68,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   const message = await prisma.message.create({
-    data: { threadId: params.id, senderId: session.user.id, body: parsed.data.body },
+    data: { threadId: id, senderId: session.user.id, body: parsed.data.body },
     include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
   })
 
@@ -76,7 +77,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const sender = session.user.id === thread.ownerId ? thread.owner : thread.finder
 
   await Promise.all([
-    createNotification(recipientId, 'new_message', `Message from ${sender.name}`, parsed.data.body.slice(0, 100), { threadId: params.id }),
+    createNotification(recipientId, 'new_message', `Message from ${sender.name}`, parsed.data.body.slice(0, 100), { threadId: id }),
     sendMessageNotification(recipient.email, sender.name),
   ])
 

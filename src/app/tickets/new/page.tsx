@@ -47,12 +47,12 @@ function PaymentStep({ clientSecret, onSuccess }: { clientSecret: string; onSucc
     e.preventDefault()
     if (!stripe || !elements) return
     setLoading(true)
-    const { error } = await stripe.confirmPayment({
+    const { error } = await stripe.confirmSetup({
       elements,
       redirect: 'if_required',
     })
     if (error) {
-      toast(error.message ?? 'Payment failed', 'error')
+      toast(error.message ?? 'Card setup failed', 'error')
       setLoading(false)
     } else {
       onSuccess()
@@ -63,7 +63,7 @@ function PaymentStep({ clientSecret, onSuccess }: { clientSecret: string; onSucc
     <form onSubmit={handleSubmit} className="space-y-4">
       <PaymentElement />
       <Button type="submit" className="w-full" disabled={loading || !stripe}>
-        {loading ? 'Processing…' : 'Pay & Post Ticket'}
+        {loading ? 'Saving…' : 'Save Card & Post Ticket'}
       </Button>
     </form>
   )
@@ -123,8 +123,8 @@ export default function NewTicketPage() {
   if (step === 3 && clientSecret) {
     return (
       <div className="max-w-lg mx-auto">
-        <h1 className="text-xl font-bold mb-1">Pay Bounty Escrow</h1>
-        <p className="text-slate text-sm mb-6">Your bounty of <strong>{formatCents(form.bountyAmountCents)}</strong> will be held until the item is returned to you.</p>
+        <h1 className="text-xl font-bold mb-1">Save Payment Method</h1>
+        <p className="text-slate text-sm mb-6">Your card will be saved but <strong>not charged</strong> until you confirm you&apos;ve received your item. Bounty: <strong>{formatCents(form.bountyAmountCents)}</strong>.</p>
         <div className="bg-white rounded-xl border border-mist p-5">
           <Elements stripe={stripePromise} options={{ clientSecret }}>
             <PaymentStep clientSecret={clientSecret} onSuccess={() => router.push(`/tickets/${ticketId}`)} />

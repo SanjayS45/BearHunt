@@ -3,12 +3,13 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { ChatWindow } from '@/components/ChatWindow'
 
-export default async function ChatPage({ params }: { params: { threadId: string } }) {
+export default async function ChatPage({ params }: { params: Promise<{ threadId: string }> }) {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
 
+  const { threadId } = await params
   const thread = await prisma.messageThread.findUnique({
-    where: { id: params.threadId },
+    where: { id: threadId },
     include: {
       owner: { select: { id: true, name: true, avatarUrl: true } },
       finder: { select: { id: true, name: true, avatarUrl: true } },

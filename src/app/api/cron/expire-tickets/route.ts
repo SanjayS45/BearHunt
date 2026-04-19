@@ -23,11 +23,11 @@ export async function GET(request: Request) {
   for (const ticket of expiredTickets) {
     if (ticket.stripePaymentIntentId) {
       try {
-        await stripe.refunds.create({ payment_intent: ticket.stripePaymentIntentId })
-      } catch { /* already refunded or captured */ }
+        await stripe.setupIntents.cancel(ticket.stripePaymentIntentId)
+      } catch { /* already cancelled or expired */ }
     }
     await prisma.ticket.update({ where: { id: ticket.id }, data: { status: 'expired' } })
-    await createNotification(ticket.ownerId, 'ticket_expiring', 'Ticket expired', `Your ticket for "${ticket.description}" expired and your bounty has been refunded.`)
+    await createNotification(ticket.ownerId, 'ticket_expiring', 'Ticket expired', `Your ticket for "${ticket.description}" expired. No charge was made.`)
   }
 
   // Warn owners 3 days before expiry

@@ -13,18 +13,19 @@ const CATEGORIES: ItemCategory[] = [
 export default async function BountyBoardPage({
   searchParams,
 }: {
-  searchParams: { category?: string; area?: string; min?: string; max?: string; sort?: string; page?: string }
+  searchParams: Promise<{ category?: string; area?: string; min?: string; max?: string; sort?: string; page?: string }>
 }) {
-  const page = parseInt(searchParams.page ?? '1')
+  const sp = await searchParams
+  const page = parseInt(sp.page ?? '1')
   const limit = 20
-  const category = searchParams.category as ItemCategory | undefined
-  const sort = searchParams.sort ?? 'newest'
+  const category = sp.category as ItemCategory | undefined
+  const sort = sp.sort ?? 'newest'
 
   const where: Record<string, unknown> = { status: 'active' }
   if (category && CATEGORIES.includes(category)) where.category = category
-  if (searchParams.area) where.generalArea = { contains: searchParams.area, mode: 'insensitive' }
-  if (searchParams.min) where.bountyAmountCents = { ...((where.bountyAmountCents as object) ?? {}), gte: parseInt(searchParams.min) }
-  if (searchParams.max) where.bountyAmountCents = { ...((where.bountyAmountCents as object) ?? {}), lte: parseInt(searchParams.max) }
+  if (sp.area) where.generalArea = { contains: sp.area, mode: 'insensitive' }
+  if (sp.min) where.bountyAmountCents = { ...((where.bountyAmountCents as object) ?? {}), gte: parseInt(sp.min) }
+  if (sp.max) where.bountyAmountCents = { ...((where.bountyAmountCents as object) ?? {}), lte: parseInt(sp.max) }
 
   const orderBy = sort === 'highest_bounty' ? { bountyAmountCents: 'desc' as const } : { filedAt: 'desc' as const }
 

@@ -73,11 +73,11 @@ export async function POST(request: Request) {
     user = await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer.id } })
   }
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: bountyAmountCents,
-    currency: 'usd',
+  // SetupIntent: saves card for later charge, does NOT charge now
+  const setupIntent = await stripe.setupIntents.create({
     customer: user.stripeCustomerId!,
-    metadata: { type: 'bounty_escrow' },
+    usage: 'off_session',
+    metadata: { type: 'bounty_setup' },
   })
 
   const filedAt = new Date()
@@ -90,11 +90,11 @@ export async function POST(request: Request) {
       lostAt: new Date(lostAt),
       referencePhotoUrl,
       bountyAmountCents,
-      stripePaymentIntentId: paymentIntent.id,
+      stripePaymentIntentId: setupIntent.id, // stores SetupIntent ID
       filedAt,
       expiresAt: addDays(filedAt, 30),
     },
   })
 
-  return NextResponse.json({ ticket, clientSecret: paymentIntent.client_secret }, { status: 201 })
+  return NextResponse.json({ ticket, clientSecret: setupIntent.client_secret }, { status: 201 })
 }

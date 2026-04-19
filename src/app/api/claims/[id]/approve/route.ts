@@ -4,12 +4,13 @@ import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
 import { sendClaimApprovedNotification, sendClaimRejectedNotification } from '@/lib/email'
 
-export async function POST(_: Request, { params }: { params: { id: string } }) {
+export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { id } = await params
   const claim = await prisma.claim.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { ticket: { include: { owner: true } }, finder: true },
   })
   if (!claim) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -17,30 +18,28 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
   if (claim.status !== 'pending_review') return NextResponse.json({ error: 'Claim is not pending review' }, { status: 400 })
   if (claim.ticket.status !== 'active') return NextResponse.json({ error: 'Ticket is not active' }, { status: 400 })
 
-  // Approve this claim, reject all others, update ticket, create thread
   const [updatedClaim] = await prisma.$transaction([
-    prisma.claim.update({ where: { id: params.id }, data: { status: 'approved', approvedAt: new Date() } }),
+    prisma.claim.update({ where: { id }, data: { status: 'approved', approvedAt: new Date() } }),
     prisma.claim.updateMany({
-      where: { ticketId: claim.ticketId, id: { not: params.id }, status: 'pending_review' },
+      where: { ticketId: claim.ticketId, id: { not: id }, status: 'pending_review' },
       data: { status: 'rejected' },
     }),
     prisma.ticket.update({
       where: { id: claim.ticketId },
-      data: { status: 'found', approvedClaimId: params.id },
+      data: { status: 'found', approvedClaimId: id },
     }),
     prisma.messageThread.create({
-      data: { claimId: params.id, ownerId: session.user.id, finderId: claim.finderId },
+      data: { claimId: id, ownerId: session.user.id, finderId: claim.finderId },
     }),
   ])
 
-  // Get rejected finders to notify them
   const rejectedClaims = await prisma.claim.findMany({
-    where: { ticketId: claim.ticketId, id: { not: params.id }, status: 'rejected' },
+    where: { ticketId: claim.ticketId, id: { not: id }, status: 'rejected' },
     include: { finder: true },
   })
 
   await Promise.all([
-    createNotification(claim.finderId, 'claim_approved', 'Your claim was approved!', `The owner confirmed your find. Open the chat to coordinate the handoff.`, { ticketId: claim.ticketId, claimId: params.id }),
+    createNotification(claim.finderId, 'claim_approved', 'Your claim was approved!', `The owner confirmed your find. Open the chat to coordinate the handoff.`, { ticketId: claim.ticketId, claimId: id }),
     sendClaimApprovedNotification(claim.finder.email, claim.ticket.description),
     ...rejectedClaims.map(rc =>
       Promise.all([

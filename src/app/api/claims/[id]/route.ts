@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { id } = await params
   const claim = await prisma.claim.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       finder: { select: { id: true, name: true, avatarUrl: true, ratingAvg: true, ratingCount: true } },
       ticket: { include: { owner: { select: { id: true, name: true, avatarUrl: true, ratingAvg: true, ratingCount: true } } } },

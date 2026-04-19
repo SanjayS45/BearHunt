@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button'
 import { formatCents, categoryLabel } from '@/lib/utils'
 import { ConnectButton } from '@/components/ConnectButton'
 
-export default async function EarningsPage({ searchParams }: { searchParams: { connect?: string } }) {
+export default async function EarningsPage({ searchParams }: { searchParams: Promise<{ connect?: string }> }) {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
 
+  const { connect } = await searchParams
   const [user, transactions] = await Promise.all([
     prisma.user.findUniqueOrThrow({ where: { id: session.user.id } }),
     prisma.transaction.findMany({
@@ -33,7 +34,7 @@ export default async function EarningsPage({ searchParams }: { searchParams: { c
         </div>
       )}
 
-      {searchParams.connect === 'success' && (
+      {connect === 'success' && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
           <p className="text-sm text-success font-medium">Stripe Connect set up successfully! You can now receive payouts.</p>
         </div>

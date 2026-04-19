@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -8,7 +8,8 @@ import { LocationInput } from '@/components/LocationInput'
 import { toast } from '@/hooks/use-toast'
 import { Camera, X } from 'lucide-react'
 
-export default function ClaimPage({ params }: { params: { id: string } }) {
+export default function ClaimPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   const [photos, setPhotos] = useState<string[]>([])
   const [previews, setPreviews] = useState<string[]>([])
@@ -27,7 +28,7 @@ export default function ClaimPage({ params }: { params: { id: string } }) {
     const fd = new FormData()
     files.forEach(f => fd.append('files', f))
     fd.append('bucket', 'proof-photos')
-    fd.append('ticketId', params.id)
+    fd.append('ticketId', id)
     fd.append('claimId', 'pending')
     const res = await fetch('/api/upload', { method: 'POST', body: fd })
     if (res.ok) {
@@ -50,7 +51,7 @@ export default function ClaimPage({ params }: { params: { id: string } }) {
     if (photos.length === 0) { toast('Add at least one photo', 'error'); return }
     if (!location) { toast('Enter where you found it', 'error'); return }
     setSubmitting(true)
-    const res = await fetch(`/api/tickets/${params.id}/claims`, {
+    const res = await fetch(`/api/tickets/${id}/claims`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ proofPhotoUrls: photos, foundLocation: location, finderNote: note || undefined }),
@@ -58,7 +59,7 @@ export default function ClaimPage({ params }: { params: { id: string } }) {
     const data = await res.json()
     if (res.ok) {
       toast('Claim submitted! Waiting for owner review.', 'success')
-      router.push(`/tickets/${params.id}`)
+      router.push(`/tickets/${id}`)
     } else {
       toast(data.error ?? 'Failed to submit', 'error')
       setSubmitting(false)

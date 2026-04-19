@@ -7,12 +7,13 @@ import { z } from 'zod'
 
 const schema = z.object({ reason: z.string().min(10).max(1000) })
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { id } = await params
   const claim = await prisma.claim.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { ticket: { include: { owner: true } }, finder: true },
   })
   if (!claim) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -25,14 +26,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const dispute = await prisma.dispute.create({
-    data: { claimId: params.id, openedById: session.user.id, reason: parsed.data.reason },
+    data: { claimId: id, openedById: session.user.id, reason: parsed.data.reason },
   })
 
   await Promise.all([
-    prisma.claim.update({ where: { id: params.id }, data: { status: 'disputed' } }),
+    prisma.claim.update({ where: { id }, data: { status: 'disputed' } }),
     prisma.ticket.update({ where: { id: claim.ticketId }, data: { status: 'disputed' } }),
-    createNotification(claim.ticket.ownerId, 'dispute_opened', 'A dispute has been opened', 'Admin will review and reach out shortly.', { claimId: params.id }),
-    createNotification(claim.finderId, 'dispute_opened', 'A dispute has been opened', 'Admin will review and reach out shortly.', { claimId: params.id }),
+    createNotification(claim.ticket.ownerId, 'dispute_opened', 'A dispute has been opened', 'Admin will review and reach out shortly.', { claimId: id }),
+    createNotification(claim.finderId, 'dispute_opened', 'A dispute has been opened', 'Admin will review and reach out shortly.', { claimId: id }),
     sendDisputeNotification(claim.ticket.owner.email, 'owner'),
     sendDisputeNotification(claim.finder.email, 'finder'),
   ])

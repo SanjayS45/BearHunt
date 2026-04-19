@@ -14,16 +14,17 @@ const createSchema = z.object({
   finderNote: z.string().max(500).optional(),
 })
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const ticket = await prisma.ticket.findUnique({ where: { id: params.id } })
+  const { id } = await params
+  const ticket = await prisma.ticket.findUnique({ where: { id } })
   if (!ticket) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (ticket.ownerId !== session.user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const claims = await prisma.claim.findMany({
-    where: { ticketId: params.id },
+    where: { ticketId: id },
     include: { finder: { select: { id: true, name: true, avatarUrl: true, ratingAvg: true, ratingCount: true } } },
     orderBy: { foundAt: 'desc' },
   })
@@ -31,11 +32,12 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   return NextResponse.json({ claims })
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const ticket = await prisma.ticket.findUnique({ where: { id: params.id }, include: { owner: true } })
+  const { id } = await params
+  const ticket = await prisma.ticket.findUnique({ where: { id }, include: { owner: true } })
   if (!ticket) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (ticket.status !== 'active') return NextResponse.json({ error: 'Ticket is not active' }, { status: 400 })
   if (ticket.ownerId === session.user.id) return NextResponse.json({ error: 'Cannot claim your own ticket' }, { status: 400 })
@@ -48,7 +50,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const claim = await prisma.claim.create({
-    data: { ticketId: params.id, finderId: session.user.id, ...parsed.data },
+    data: { ticketId: id, finderId: session.user.id, ...parsed.data },
   })
 
   await Promise.all([

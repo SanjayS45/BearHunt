@@ -9,12 +9,13 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { BountyBadge } from '@/components/BountyBadge'
 import { ClaimActions } from '@/components/ClaimActions'
 
-export default async function ClaimsReviewPage({ params }: { params: { id: string } }) {
+export default async function ClaimsReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
 
+  const { id } = await params
   const ticket = await prisma.ticket.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       claims: {
         include: {
@@ -26,7 +27,7 @@ export default async function ClaimsReviewPage({ params }: { params: { id: strin
   })
 
   if (!ticket) notFound()
-  if (ticket.ownerId !== session.user.id) redirect(`/tickets/${params.id}`)
+  if (ticket.ownerId !== session.user.id) redirect(`/tickets/${id}`)
 
   const pendingClaims = ticket.claims.filter(c => c.status === 'pending_review')
   const otherClaims = ticket.claims.filter(c => c.status !== 'pending_review')
@@ -89,7 +90,7 @@ export default async function ClaimsReviewPage({ params }: { params: { id: strin
                   </div>
                 )}
 
-                <ClaimActions claimId={claim.id} ticketId={params.id} />
+                <ClaimActions claimId={claim.id} ticketId={id} />
               </CardContent>
             </Card>
           ))}

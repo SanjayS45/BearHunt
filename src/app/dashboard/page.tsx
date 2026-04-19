@@ -8,11 +8,12 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { BountyBadge } from '@/components/BountyBadge'
 import { categoryLabel } from '@/lib/utils'
 
-export default async function DashboardPage({ searchParams }: { searchParams: { tab?: string } }) {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
 
-  const tab = searchParams.tab ?? 'tickets'
+  const { tab: tabParam } = await searchParams
+  const tab = tabParam ?? 'tickets'
 
   const [myTickets, myClaims, earnings] = await Promise.all([
     prisma.ticket.findMany({

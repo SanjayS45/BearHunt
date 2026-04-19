@@ -10,14 +10,15 @@ const schema = z.object({
   notes: z.string().max(1000).optional(),
 })
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.email || !isAdmin(session.user.email)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const { id } = await params
   const dispute = await prisma.dispute.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       claim: {
         include: {
@@ -41,13 +42,20 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   } as const
 
   await prisma.dispute.update({
-    where: { id: params.id },
+    where: { id },
     data: { status: statusMap[resolution], resolution: notes, resolvedAt: new Date() },
   })
 
-  if (resolution === 'reversed' && dispute.claim.ticket.stripePaymentIntentId) {
-    // Refund owner
-    await stripe.refunds.create({ payment_intent: dispute.claim.ticket.stripePaymentIntentId })
+  if (resolution === 'reversed') {
+    // Find the capture PaymentIntent from transaction records (stripeTransferId stores the PI id)
+    const captureTx = await prisma.transaction.findFirst({
+      where: { ticketId: dispute.claim.ticketId, type: 'payout_finder', status: 'completed' },
+    })
+    if (captureTx?.stripeTransferId) {
+      try {
+        await stripe.refunds.create({ payment_intent: captureTx.stripeTransferId })
+      } catch { /* may already be refunded */ }
+    }
     await prisma.ticket.update({ where: { id: dispute.claim.ticketId }, data: { status: 'cancelled' } })
   } else if (resolution === 'cancelled') {
     await prisma.ticket.update({ where: { id: dispute.claim.ticketId }, data: { status: 'active', approvedClaimId: null } })

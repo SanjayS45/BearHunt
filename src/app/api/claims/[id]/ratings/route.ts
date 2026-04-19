@@ -8,12 +8,13 @@ const schema = z.object({
   comment: z.string().max(500).optional(),
 })
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { id } = await params
   const claim = await prisma.claim.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { ticket: true },
   })
   if (!claim) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -29,10 +30,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const rating = await prisma.rating.create({
-    data: { claimId: params.id, raterId: session.user.id, ratedId, ...parsed.data },
+    data: { claimId: id, raterId: session.user.id, ratedId, ...parsed.data },
   })
 
-  // Recalculate rated user's average
   const agg = await prisma.rating.aggregate({ where: { ratedId }, _avg: { score: true }, _count: true })
   await prisma.user.update({
     where: { id: ratedId },

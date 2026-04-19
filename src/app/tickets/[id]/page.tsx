@@ -12,11 +12,12 @@ import { CategoryIcon } from '@/components/CategoryIcon'
 import { categoryLabel } from '@/lib/utils'
 import { TicketActions } from '@/components/TicketActions'
 
-export default async function TicketDetailPage({ params }: { params: { id: string } }) {
+export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const [session, ticket] = await Promise.all([
     auth(),
     prisma.ticket.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         owner: { select: { id: true, name: true, avatarUrl: true, ratingAvg: true, ratingCount: true } },
         _count: { select: { claims: true } },
