@@ -15,7 +15,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { tab: tabParam } = await searchParams
   const tab = tabParam ?? 'tickets'
 
-  const [myTickets, myClaims, earnings] = await Promise.all([
+  const [myTickets, myClaims, pendingEarnings, completedEarnings] = await Promise.all([
     prisma.ticket.findMany({
       where: { ownerId: session.user.id },
       include: { owner: { select: { id: true, name: true, avatarUrl: true, ratingAvg: true, ratingCount: true } } },
@@ -29,10 +29,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       orderBy: { foundAt: 'desc' },
     }),
     prisma.transaction.aggregate({
+      where: { userId: session.user.id, type: 'payout_finder', status: 'pending' },
+      _sum: { amountCents: true },
+    }),
+    prisma.transaction.aggregate({
       where: { userId: session.user.id, type: 'payout_finder', status: 'completed' },
       _sum: { amountCents: true },
     }),
   ])
+
+  const pendingCents = pendingEarnings._sum.amountCents ?? 0
+  const completedCents = completedEarnings._sum.amountCents ?? 0
 
   const tabs = [
     { id: 'tickets', label: `My Tickets (${myTickets.length})` },
@@ -104,13 +111,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       {tab === 'earnings' && (
         <div>
-          <div className="bg-berkeley-blue text-white rounded-xl p-5 mb-6">
-            <p className="text-sm text-white/70">Total earnings</p>
-            <p className="text-3xl font-bold mt-1">${((earnings._sum.amountCents ?? 0) / 100).toFixed(2)}</p>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-berkeley-blue text-white rounded-xl p-5">
+              <p className="text-sm text-white/70">Available to cash out</p>
+              <p className="text-3xl font-bold mt-1">${(pendingCents / 100).toFixed(2)}</p>
+            </div>
+            <div className="bg-white border border-mist rounded-xl p-5">
+              <p className="text-sm text-fog">Total paid out</p>
+              <p className="text-3xl font-bold mt-1 text-ink">${(completedCents / 100).toFixed(2)}</p>
+            </div>
           </div>
           <Link href="/dashboard/earnings">
             <div className="bg-white rounded-xl border border-mist p-4 hover:border-berkeley-blue/40 transition-colors text-sm font-medium text-berkeley-blue">
-              View full earnings history & payouts →
+              View full earnings history & cash out →
             </div>
           </Link>
         </div>
