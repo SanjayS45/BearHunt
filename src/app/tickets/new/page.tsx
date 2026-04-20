@@ -70,10 +70,6 @@ export default function NewTicketPage() {
         toast('Please fill in all required fields', 'error')
         return
       }
-      if (form.description.length < 10) {
-        toast('Description must be at least 10 characters', 'error')
-        return
-      }
       setStep(2)
     } else if (step === 2) {
       if (form.bountyAmountCents < 200) {

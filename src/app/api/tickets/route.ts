@@ -8,7 +8,7 @@ import { addDays } from 'date-fns'
 import type { ItemCategory } from '@prisma/client'
 
 const createSchema = z.object({
-  description: z.string().min(10, 'Description must be at least 10 characters').max(500),
+  description: z.string().min(1).max(500),
   category: z.enum(['water_bottle','phone','wallet','keys','clothing','bag','electronics','book','id_card','headphones','charger','other']),
   generalArea: z.string().min(2).max(100),
   lostAt: z.string().datetime(),
