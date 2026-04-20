@@ -12,7 +12,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: 'jwt' },
   callbacks: {
     async signIn({ profile }) {
-      if (!profile?.email?.endsWith('@berkeley.edu')) return false
+      // if (!profile?.email?.endsWith('@berkeley.edu')) return false
       const existing = await prisma.user.findUnique({
         where: { email: profile.email },
         select: { isBanned: true },
