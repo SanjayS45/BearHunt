@@ -40,10 +40,18 @@ export default function EarningsPage() {
 
   async function handleConnect() {
     setConnectLoading(true)
-    const res = await fetch('/api/users/me/stripe-connect', { method: 'POST' })
-    const d = await res.json()
-    if (res.ok && d.url) window.location.href = d.url
-    else { toast(d.error ?? 'Failed to start setup', 'error'); setConnectLoading(false) }
+    try {
+      const res = await fetch('/api/users/me/stripe-connect', { method: 'POST' })
+      const d = await res.json().catch(() => ({}))
+      if (res.ok && d.url) {
+        window.location.href = d.url
+        return
+      }
+      toast(d.error ?? `Setup failed (${res.status})`, 'error')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Network error', 'error')
+    }
+    setConnectLoading(false)
   }
 
   async function handleCashout() {
