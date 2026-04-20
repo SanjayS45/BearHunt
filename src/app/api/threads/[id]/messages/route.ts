@@ -59,7 +59,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const body = await request.json()
   const parsed = sendSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
 
   if (hasBlockedContent(parsed.data.body)) {
     return NextResponse.json({
