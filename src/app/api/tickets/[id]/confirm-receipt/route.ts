@@ -34,7 +34,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   if (!paymentMethodId) return NextResponse.json({ error: 'No saved payment method found' }, { status: 400 })
 
   // Charge the owner — money stays in platform account until finder cashes out
-  await stripe.paymentIntents.create({
+  const paymentIntent = await stripe.paymentIntents.create({
     amount: ticket.bountyAmountCents,
     currency: 'usd',
     customer: ticket.owner.stripeCustomerId,
@@ -44,12 +44,16 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
     metadata: { type: 'bounty_capture', ticketId: ticket.id, claimId: ticket.approvedClaim.id },
   })
 
+  const chargeId = typeof paymentIntent.latest_charge === 'string'
+    ? paymentIntent.latest_charge
+    : (paymentIntent.latest_charge?.id ?? null)
+
   await Promise.all([
     prisma.claim.update({ where: { id: ticket.approvedClaim.id }, data: { status: 'completed', completedAt: new Date() } }),
     prisma.ticket.update({ where: { id }, data: { status: 'resolved', resolvedAt: new Date() } }),
     prisma.transaction.createMany({
       data: [
-        { ticketId: ticket.id, claimId: ticket.approvedClaim.id, userId: finder.id, type: 'payout_finder', amountCents: finderPayout, status: 'pending' },
+        { ticketId: ticket.id, claimId: ticket.approvedClaim.id, userId: finder.id, type: 'payout_finder', amountCents: finderPayout, status: 'pending', stripeChargeId: chargeId },
         { ticketId: ticket.id, claimId: ticket.approvedClaim.id, userId: session.user.id, type: 'platform_fee', amountCents: platformFee, status: 'completed' },
       ],
     }),

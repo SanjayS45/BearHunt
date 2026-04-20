@@ -23,17 +23,28 @@ export async function POST() {
 
   const totalCents = pending.reduce((s, t) => s + t.amountCents, 0)
 
-  const transfer = await stripe.transfers.create({
-    amount: totalCents,
-    currency: 'usd',
-    destination: user.stripeAccountId,
-    metadata: { userId: user.id },
-  })
+  // One transfer per pending transaction, using source_transaction to bypass
+  // Stripe's 2-day settlement hold when the charge ID is available
+  const transfers = await Promise.all(
+    pending.map(t =>
+      stripe.transfers.create({
+        amount: t.amountCents,
+        currency: 'usd',
+        destination: user.stripeAccountId!,
+        ...(t.stripeChargeId ? { source_transaction: t.stripeChargeId } : {}),
+        metadata: { userId: user.id, transactionId: t.id },
+      })
+    )
+  )
 
-  await prisma.transaction.updateMany({
-    where: { id: { in: pending.map(t => t.id) } },
-    data: { status: 'completed', stripeTransferId: transfer.id },
-  })
+  await Promise.all(
+    pending.map((t, i) =>
+      prisma.transaction.update({
+        where: { id: t.id },
+        data: { status: 'completed', stripeTransferId: transfers[i].id },
+      })
+    )
+  )
 
   return NextResponse.json({ success: true, transferredCents: totalCents })
 }

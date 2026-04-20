@@ -172,6 +172,7 @@ model Transaction {
   user             User              @relation(fields: [userId], references: [id])
   type             TransactionType
   amountCents      Int
+  stripeChargeId   String?
   stripeTransferId String?
   status           TransactionStatus @default(pending)
   createdAt        DateTime          @default(now())
