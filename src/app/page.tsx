@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 import { TicketCard } from '@/components/TicketCard'
 import { TicketFilters } from '@/components/TicketFilters'
@@ -47,7 +48,9 @@ export default async function BountyBoardPage({
         <p className="text-slate text-sm mt-1">{total} active {total === 1 ? 'item' : 'items'} lost on campus</p>
       </div>
 
-      <TicketFilters />
+      <Suspense fallback={null}>
+        <TicketFilters />
+      </Suspense>
 
       <div className="mt-4 space-y-3">
         {tickets.length === 0 ? (

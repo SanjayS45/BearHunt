@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
@@ -51,10 +51,14 @@ export default function NewTicketPage() {
     description: '',
     category: '',
     generalArea: '',
-    lostAt: new Date().toISOString().slice(0, 16),
+    lostAt: '',
     bountyAmountCents: 500,
     referencePhotoUrl: '',
   })
+
+  useEffect(() => {
+    setForm(f => ({ ...f, lostAt: new Date().toISOString().slice(0, 16) }))
+  }, [])
 
   function set(key: string, value: string | number) {
     setForm(f => ({ ...f, [key]: value }))
