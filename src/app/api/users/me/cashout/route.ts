@@ -46,5 +46,8 @@ export async function POST() {
     )
   )
 
-  return NextResponse.json({ success: true, transferredCents: totalCents })
+  // Generate a Stripe Express dashboard link so the user can see their transfer
+  const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId)
+
+  return NextResponse.json({ success: true, transferredCents: totalCents, dashboardUrl: loginLink.url })
 }

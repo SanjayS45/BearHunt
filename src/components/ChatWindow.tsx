@@ -37,7 +37,25 @@ export function ChatWindow({ thread, currentUserId, initialMessages }: ChatWindo
   const isOwner = currentUserId === thread.ownerId
   const other = isOwner ? thread.finder : thread.owner
 
+  // Poll for new messages every 3s (reliable fallback even if Supabase realtime
+  // is not enabled). Supabase realtime channel is kept for instant updates
+  // when available.
   useEffect(() => {
+    let cancelled = false
+
+    async function refresh() {
+      const res = await fetch(`/api/threads/${thread.id}/messages`)
+      if (!res.ok || cancelled) return
+      const data = await res.json()
+      setMessages(prev => {
+        const existing = new Set(prev.map(m => m.id))
+        const incoming = (data.messages ?? []).filter((m: { id: string }) => !existing.has(m.id))
+        return incoming.length > 0 ? [...prev, ...incoming] : prev
+      })
+    }
+
+    const interval = setInterval(refresh, 3000)
+
     const channel = supabase
       .channel(`thread-${thread.id}`)
       .on('postgres_changes', {
@@ -45,12 +63,14 @@ export function ChatWindow({ thread, currentUserId, initialMessages }: ChatWindo
         schema: 'public',
         table: 'messages',
         filter: `thread_id=eq.${thread.id}`,
-      }, (payload) => {
-        setMessages(prev => [...prev, payload.new as Message & { sender: { id: string; name: string; avatarUrl: string | null } }])
-      })
+      }, () => { refresh() })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+      supabase.removeChannel(channel)
+    }
   }, [thread.id])
 
   useEffect(() => {

@@ -27,8 +27,13 @@ export default function EarningsPage() {
   const [cashoutLoading, setCashoutLoading] = useState(false)
 
   async function load() {
-    const res = await fetch('/api/users/me/earnings')
-    if (res.ok) setData(await res.json())
+    const res = await fetch('/api/users/me/earnings', { cache: 'no-store' })
+    if (res.ok) {
+      setData(await res.json())
+    } else {
+      const d = await res.json().catch(() => ({}))
+      toast(d.error ?? `Failed to load earnings (${res.status})`, 'error')
+    }
   }
 
   useEffect(() => { load() }, [])
@@ -46,7 +51,11 @@ export default function EarningsPage() {
     const res = await fetch('/api/users/me/cashout', { method: 'POST' })
     const d = await res.json()
     if (res.ok) {
-      toast(`${formatCents(d.transferredCents)} transferred to your account!`, 'success')
+      toast(`${formatCents(d.transferredCents)} sent! Opening Stripe…`, 'success')
+      if (d.dashboardUrl) {
+        window.location.href = d.dashboardUrl
+        return
+      }
       load()
     } else {
       toast(d.error ?? 'Cash out failed', 'error')

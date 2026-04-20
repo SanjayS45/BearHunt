@@ -11,9 +11,10 @@ interface TicketActionsProps {
   isOwner: boolean
   isLoggedIn: boolean
   claimCount: number
+  userClaim?: { id: string; status: string; threadId: string | null } | null
 }
 
-export function TicketActions({ ticket, isOwner, isLoggedIn, claimCount }: TicketActionsProps) {
+export function TicketActions({ ticket, isOwner, isLoggedIn, claimCount, userClaim }: TicketActionsProps) {
   const [cancelling, setCancelling] = useState(false)
   const [extending, setExtending] = useState(false)
   const [showBountyForm, setShowBountyForm] = useState(false)
@@ -150,6 +151,28 @@ export function TicketActions({ ticket, isOwner, isLoggedIn, claimCount }: Ticke
       <Link href="/login">
         <Button className="w-full">Sign in to Claim Bounty</Button>
       </Link>
+    )
+  }
+
+  if (userClaim) {
+    if (userClaim.status === 'approved' && userClaim.threadId) {
+      return (
+        <Link href={`/messages/${userClaim.threadId}`} className="block">
+          <Button className="w-full">Open Chat with Owner →</Button>
+        </Link>
+      )
+    }
+    const label =
+      userClaim.status === 'pending_review' ? 'Claim submitted — awaiting review' :
+      userClaim.status === 'approved' ? 'Claim approved' :
+      userClaim.status === 'rejected' ? 'Claim rejected' :
+      userClaim.status === 'completed' ? 'Claim completed' :
+      userClaim.status === 'disputed' ? 'Claim in dispute' :
+      'Claim submitted'
+    return (
+      <Button className="w-full" disabled>
+        {label}
+      </Button>
     )
   }
 

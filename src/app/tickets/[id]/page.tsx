@@ -30,6 +30,13 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   const isOwner = session?.user?.id === ticket.ownerId
   const isLoggedIn = !!session?.user?.id
 
+  const userClaim = session?.user?.id && !isOwner
+    ? await prisma.claim.findUnique({
+        where: { ticketId_finderId: { ticketId: ticket.id, finderId: session.user.id } },
+        include: { thread: { select: { id: true } } },
+      })
+    : null
+
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -89,7 +96,13 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
         )}
       </div>
 
-      <TicketActions ticket={ticket} isOwner={isOwner} isLoggedIn={isLoggedIn} claimCount={ticket._count.claims} />
+      <TicketActions
+        ticket={ticket}
+        isOwner={isOwner}
+        isLoggedIn={isLoggedIn}
+        claimCount={ticket._count.claims}
+        userClaim={userClaim ? { id: userClaim.id, status: userClaim.status, threadId: userClaim.thread?.id ?? null } : null}
+      />
     </div>
   )
 }
