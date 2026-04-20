@@ -3,7 +3,6 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { stripe } from '@/lib/stripe'
 import { createNotification } from '@/lib/notifications'
-import { sendPayoutNotification } from '@/lib/email'
 import { formatCents } from '@/lib/utils'
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -27,7 +26,6 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   const finderPayout = Math.floor(ticket.bountyAmountCents * 0.85)
   const platformFee = ticket.bountyAmountCents - finderPayout
 
-  // Retrieve the SetupIntent to get the saved payment method
   const setupIntent = await stripe.setupIntents.retrieve(ticket.stripePaymentIntentId!)
   const paymentMethodId = typeof setupIntent.payment_method === 'string'
     ? setupIntent.payment_method
@@ -35,41 +33,14 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
 
   if (!paymentMethodId) return NextResponse.json({ error: 'No saved payment method found' }, { status: 400 })
 
-  if (!finder.stripeAccountId) {
-    // Charge card but queue payout — finder must complete Connect onboarding first
-    await stripe.paymentIntents.create({
-      amount: ticket.bountyAmountCents,
-      currency: 'usd',
-      customer: ticket.owner.stripeCustomerId,
-      payment_method: paymentMethodId,
-      confirm: true,
-      off_session: true,
-      metadata: { type: 'bounty_capture', ticketId: ticket.id, claimId: ticket.approvedClaim.id },
-    })
-
-    await Promise.all([
-      prisma.claim.update({ where: { id: ticket.approvedClaim.id }, data: { status: 'completed', completedAt: new Date() } }),
-      prisma.ticket.update({ where: { id }, data: { status: 'resolved', resolvedAt: new Date() } }),
-      prisma.transaction.create({
-        data: { ticketId: ticket.id, claimId: ticket.approvedClaim.id, userId: finder.id, type: 'payout_finder', amountCents: finderPayout, status: 'pending' },
-      }),
-      createNotification(finder.id, 'payout_sent', 'Payout pending', 'Your payout is queued. Complete Stripe Connect setup to receive it.'),
-    ])
-    return NextResponse.json({ queued: true, message: 'Payout queued — finder must complete Stripe Connect onboarding.' })
-  }
-
-  // Charge card and immediately transfer 85% to finder via destination charge
-  const pi = await stripe.paymentIntents.create({
+  // Charge the owner — money stays in platform account until finder cashes out
+  await stripe.paymentIntents.create({
     amount: ticket.bountyAmountCents,
     currency: 'usd',
     customer: ticket.owner.stripeCustomerId,
     payment_method: paymentMethodId,
     confirm: true,
     off_session: true,
-    transfer_data: {
-      destination: finder.stripeAccountId,
-      amount: finderPayout,
-    },
     metadata: { type: 'bounty_capture', ticketId: ticket.id, claimId: ticket.approvedClaim.id },
   })
 
@@ -78,12 +49,11 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
     prisma.ticket.update({ where: { id }, data: { status: 'resolved', resolvedAt: new Date() } }),
     prisma.transaction.createMany({
       data: [
-        { ticketId: ticket.id, claimId: ticket.approvedClaim.id, userId: finder.id, type: 'payout_finder', amountCents: finderPayout, stripeTransferId: pi.id, status: 'completed' },
+        { ticketId: ticket.id, claimId: ticket.approvedClaim.id, userId: finder.id, type: 'payout_finder', amountCents: finderPayout, status: 'pending' },
         { ticketId: ticket.id, claimId: ticket.approvedClaim.id, userId: session.user.id, type: 'platform_fee', amountCents: platformFee, status: 'completed' },
       ],
     }),
-    createNotification(finder.id, 'payout_sent', 'Payout incoming!', `${formatCents(finderPayout)} is on its way to your Stripe account.`),
-    sendPayoutNotification(finder.email, formatCents(finderPayout)),
+    createNotification(finder.id, 'payout_sent', 'Bounty earned!', `${formatCents(finderPayout)} is ready to cash out in your earnings.`),
   ])
 
   return NextResponse.json({ success: true, payoutCents: finderPayout })

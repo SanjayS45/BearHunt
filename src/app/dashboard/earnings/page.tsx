@@ -1,78 +1,159 @@
-import { auth } from '@/auth'
-import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
+'use client'
+import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { formatCents, categoryLabel } from '@/lib/utils'
-import { ConnectButton } from '@/components/ConnectButton'
+import { toast } from '@/hooks/use-toast'
 
-export default async function EarningsPage({ searchParams }: { searchParams: Promise<{ connect?: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) redirect('/login')
+interface Transaction {
+  id: string
+  amountCents: number
+  status: string
+  createdAt: string
+  ticket: { id: string; description: string; category: string }
+}
 
-  const { connect } = await searchParams
-  const [user, transactions] = await Promise.all([
-    prisma.user.findUniqueOrThrow({ where: { id: session.user.id } }),
-    prisma.transaction.findMany({
-      where: { userId: session.user.id, type: 'payout_finder', status: 'completed' },
-      include: { ticket: { select: { id: true, description: true, category: true } } },
-      orderBy: { createdAt: 'desc' },
-    }),
-  ])
+interface Data {
+  user: { stripeAccountId: string | null }
+  pending: Transaction[]
+  completed: Transaction[]
+  pendingCents: number
+  completedCents: number
+}
 
-  const total = transactions.reduce((s, t) => s + t.amountCents, 0)
+export default function EarningsPage() {
+  const [data, setData] = useState<Data | null>(null)
+  const [connectLoading, setConnectLoading] = useState(false)
+  const [cashoutLoading, setCashoutLoading] = useState(false)
+
+  async function load() {
+    const res = await fetch('/api/users/me/earnings')
+    if (res.ok) setData(await res.json())
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function handleConnect() {
+    setConnectLoading(true)
+    const res = await fetch('/api/users/me/stripe-connect', { method: 'POST' })
+    const d = await res.json()
+    if (res.ok && d.url) window.location.href = d.url
+    else { toast(d.error ?? 'Failed to start setup', 'error'); setConnectLoading(false) }
+  }
+
+  async function handleCashout() {
+    setCashoutLoading(true)
+    const res = await fetch('/api/users/me/cashout', { method: 'POST' })
+    const d = await res.json()
+    if (res.ok) {
+      toast(`${formatCents(d.transferredCents)} transferred to your account!`, 'success')
+      load()
+    } else {
+      toast(d.error ?? 'Cash out failed', 'error')
+    }
+    setCashoutLoading(false)
+  }
+
+  if (!data) return <div className="max-w-2xl mx-auto py-12 text-center text-fog">Loading…</div>
+
+  const { user, pending, completed, pendingCents, completedCents } = data
+  const hasPending = pendingCents > 0
 
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-xl font-bold mb-6">Earnings</h1>
 
+      {/* Payout setup banner */}
       {!user.stripeAccountId && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-          <p className="text-sm font-medium text-warning mb-2">Set up payouts to receive bounty earnings</p>
-          <p className="text-xs text-slate mb-3">Connect your bank account via Stripe to receive payouts when you return items.</p>
-          <ConnectButton />
+          <p className="text-sm font-medium text-warning mb-1">Set up payouts to cash out your earnings</p>
+          <p className="text-xs text-slate mb-3">Connect your bank account via Stripe. Takes ~2 minutes.</p>
+          <Button size="sm" onClick={handleConnect} disabled={connectLoading}>
+            {connectLoading ? 'Redirecting…' : 'Set Up Payouts'}
+          </Button>
         </div>
       )}
 
-      {connect === 'success' && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
-          <p className="text-sm text-success font-medium">Stripe Connect set up successfully! You can now receive payouts.</p>
+      {/* Balance cards */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-berkeley-blue text-white rounded-xl p-5">
+          <p className="text-sm text-white/70">Available to cash out</p>
+          <p className="text-3xl font-bold mt-1">{formatCents(pendingCents)}</p>
+          {hasPending && user.stripeAccountId && (
+            <Button
+              className="mt-3 bg-white text-berkeley-blue hover:bg-white/90 text-sm h-8 px-3"
+              onClick={handleCashout}
+              disabled={cashoutLoading}
+            >
+              {cashoutLoading ? 'Processing…' : 'Cash Out'}
+            </Button>
+          )}
+          {hasPending && !user.stripeAccountId && (
+            <Button
+              className="mt-3 bg-white text-berkeley-blue hover:bg-white/90 text-sm h-8 px-3"
+              onClick={handleConnect}
+              disabled={connectLoading}
+            >
+              {connectLoading ? 'Redirecting…' : 'Set Up to Cash Out'}
+            </Button>
+          )}
         </div>
-      )}
-
-      <div className="bg-berkeley-blue text-white rounded-xl p-5 mb-6">
-        <p className="text-sm text-white/70">Total earned</p>
-        <p className="text-3xl font-bold mt-1">{formatCents(total)}</p>
+        <div className="bg-white border border-mist rounded-xl p-5">
+          <p className="text-sm text-fog">Total paid out</p>
+          <p className="text-3xl font-bold mt-1 text-ink">{formatCents(completedCents)}</p>
+        </div>
       </div>
 
-      {transactions.length === 0 ? (
+      {/* Pending earnings */}
+      {pending.length > 0 && (
+        <div className="mb-6">
+          <h2 className="font-semibold text-sm uppercase tracking-wide text-fog mb-3">Pending (ready to cash out)</h2>
+          <div className="bg-white rounded-xl border border-mist overflow-hidden">
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-mist">
+                {pending.map(t => (
+                  <tr key={t.id} className="hover:bg-snow transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-ink truncate max-w-[200px]">{t.ticket.description}</p>
+                      <p className="text-xs text-fog">{categoryLabel(t.ticket.category)}</p>
+                    </td>
+                    <td className="px-4 py-3 text-slate">{format(new Date(t.createdAt), 'MMM d, yyyy')}</td>
+                    <td className="px-4 py-3 text-right font-bold text-amber-600">{formatCents(t.amountCents)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Completed earnings */}
+      {completed.length > 0 && (
+        <div>
+          <h2 className="font-semibold text-sm uppercase tracking-wide text-fog mb-3">Paid Out</h2>
+          <div className="bg-white rounded-xl border border-mist overflow-hidden">
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-mist">
+                {completed.map(t => (
+                  <tr key={t.id} className="hover:bg-snow transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-ink truncate max-w-[200px]">{t.ticket.description}</p>
+                      <p className="text-xs text-fog">{categoryLabel(t.ticket.category)}</p>
+                    </td>
+                    <td className="px-4 py-3 text-slate">{format(new Date(t.createdAt), 'MMM d, yyyy')}</td>
+                    <td className="px-4 py-3 text-right font-bold text-success">{formatCents(t.amountCents)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {pending.length === 0 && completed.length === 0 && (
         <div className="text-center py-12 text-fog">
           <p className="text-slate font-medium">No earnings yet</p>
           <p className="text-sm mt-1">Browse the bounty board to start finding items</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-mist overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-snow border-b border-mist">
-              <tr>
-                <th className="text-left px-4 py-3 text-fog font-medium">Item</th>
-                <th className="text-left px-4 py-3 text-fog font-medium">Date</th>
-                <th className="text-right px-4 py-3 text-fog font-medium">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-mist">
-              {transactions.map(t => (
-                <tr key={t.id} className="hover:bg-snow transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-ink truncate max-w-[200px]">{t.ticket.description}</p>
-                    <p className="text-xs text-fog">{categoryLabel(t.ticket.category)}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate">{format(new Date(t.createdAt), 'MMM d, yyyy')}</td>
-                  <td className="px-4 py-3 text-right font-bold text-success">{formatCents(t.amountCents)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       )}
     </div>
