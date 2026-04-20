@@ -1,8 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { loadStripe } from '@stripe/stripe-js'
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,8 +10,10 @@ import { LocationInput } from '@/components/LocationInput'
 import { toast } from '@/hooks/use-toast'
 import { formatCents } from '@/lib/utils'
 
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null
+const PaymentForm = dynamic(
+  () => import('@/components/PaymentForm').then(m => m.PaymentForm),
+  { ssr: false, loading: () => <p className="text-sm text-fog">Loading payment form…</p> }
+)
 
 const CATEGORIES = [
   { value: 'water_bottle', label: 'Water Bottle' },
@@ -37,37 +38,6 @@ const BOUNTY_SUGGESTIONS: Record<string, string> = {
   electronics: 'Most people offer $15–$50',
   headphones: 'Most people offer $10–$30',
   default: 'Minimum $2 — set what the item is worth to you',
-}
-
-function PaymentStep({ clientSecret, onSuccess }: { clientSecret: string; onSuccess: () => void }) {
-  const stripe = useStripe()
-  const elements = useElements()
-  const [loading, setLoading] = useState(false)
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!stripe || !elements) return
-    setLoading(true)
-    const { error } = await stripe.confirmSetup({
-      elements,
-      redirect: 'if_required',
-    })
-    if (error) {
-      toast(error.message ?? 'Card setup failed', 'error')
-      setLoading(false)
-    } else {
-      onSuccess()
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
-      <Button type="submit" className="w-full" disabled={loading || !stripe}>
-        {loading ? 'Saving…' : 'Save Card & Post Ticket'}
-      </Button>
-    </form>
-  )
 }
 
 export default function NewTicketPage() {
@@ -126,21 +96,12 @@ export default function NewTicketPage() {
   }
 
   if (step === 3 && clientSecret) {
-    if (!stripePromise) {
-      return (
-        <div className="max-w-lg mx-auto text-center py-12">
-          <p className="text-danger font-medium">Stripe is not configured. Contact support.</p>
-        </div>
-      )
-    }
     return (
       <div className="max-w-lg mx-auto">
         <h1 className="text-xl font-bold mb-1">Save Payment Method</h1>
         <p className="text-slate text-sm mb-6">Your card will be saved but <strong>not charged</strong> until you confirm you&apos;ve received your item. Bounty: <strong>{formatCents(form.bountyAmountCents)}</strong>.</p>
         <div className="bg-white rounded-xl border border-mist p-5">
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <PaymentStep clientSecret={clientSecret} onSuccess={() => router.push(`/tickets/${ticketId}`)} />
-          </Elements>
+          <PaymentForm clientSecret={clientSecret} onSuccess={() => router.push(`/tickets/${ticketId}`)} />
         </div>
       </div>
     )
@@ -185,7 +146,6 @@ export default function NewTicketPage() {
               onChange={v => set('generalArea', v)}
               placeholder="e.g. Dwinelle Hall"
             />
-
 
             <div>
               <Label htmlFor="lostAt">When did you lose it? <span className="text-danger">*</span></Label>
