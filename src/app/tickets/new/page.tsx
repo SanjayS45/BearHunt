@@ -11,7 +11,8 @@ import { LocationInput } from '@/components/LocationInput'
 import { toast } from '@/hooks/use-toast'
 import { formatCents } from '@/lib/utils'
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 
 const CATEGORIES = [
   { value: 'water_bottle', label: 'Water Bottle' },
@@ -102,25 +103,36 @@ export default function NewTicketPage() {
         return
       }
       setLoading(true)
-      const res = await fetch('/api/tickets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, lostAt: new Date(form.lostAt).toISOString() }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        toast(data.error ?? 'Failed to create ticket', 'error')
-        setLoading(false)
-        return
+      try {
+        const res = await fetch('/api/tickets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...form, lostAt: new Date(form.lostAt).toISOString() }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          toast((data as { error?: string }).error ?? 'Failed to create ticket', 'error')
+          setLoading(false)
+          return
+        }
+        setClientSecret(data.clientSecret)
+        setTicketId(data.ticket.id)
+        setStep(3)
+      } catch (e) {
+        toast(e instanceof Error ? e.message : 'Failed to create ticket', 'error')
       }
-      setClientSecret(data.clientSecret)
-      setTicketId(data.ticket.id)
-      setStep(3)
       setLoading(false)
     }
   }
 
   if (step === 3 && clientSecret) {
+    if (!stripePromise) {
+      return (
+        <div className="max-w-lg mx-auto text-center py-12">
+          <p className="text-danger font-medium">Stripe is not configured. Contact support.</p>
+        </div>
+      )
+    }
     return (
       <div className="max-w-lg mx-auto">
         <h1 className="text-xl font-bold mb-1">Save Payment Method</h1>
