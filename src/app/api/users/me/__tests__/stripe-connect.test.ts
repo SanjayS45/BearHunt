@@ -114,9 +114,9 @@ describe('POST /api/users/me/stripe-connect', () => {
     )
   })
 
-  it('uses VERCEL_URL when NEXTAUTH_URL is not set', async () => {
+  it('uses VERCEL_PROJECT_PRODUCTION_URL when available', async () => {
     delete process.env.NEXTAUTH_URL
-    process.env.VERCEL_URL = 'myapp.vercel.app'
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = 'bearhunt.vercel.app'
 
     mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
     mockUserFindUniqueOrThrow.mockResolvedValue({
@@ -130,11 +130,11 @@ describe('POST /api/users/me/stripe-connect', () => {
 
     expect(mockAccountLinksCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        refresh_url: 'https://myapp.vercel.app/dashboard/earnings?connect=refresh',
+        refresh_url: 'https://bearhunt.vercel.app/dashboard/earnings?connect=refresh',
       })
     )
 
-    delete process.env.VERCEL_URL
+    delete process.env.VERCEL_PROJECT_PRODUCTION_URL
     process.env.NEXTAUTH_URL = 'http://localhost:3000'
   })
 })
