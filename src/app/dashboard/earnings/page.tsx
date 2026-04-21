@@ -87,6 +87,16 @@ export default function EarningsPage() {
   const { user, pending, completed, pendingCents, completedCents } = data
   const hasPending = pendingCents > 0
 
+  // Funds take 1-2 business days to settle on the platform after a bounty is confirmed.
+  // Block cashout until 2 days after the most recent pending transaction was created.
+  const latestPending = pending.length > 0
+    ? pending.reduce((a, b) => new Date(a.createdAt) > new Date(b.createdAt) ? a : b)
+    : null
+  const fundsReadyAt = latestPending
+    ? new Date(new Date(latestPending.createdAt).getTime() + 2 * 24 * 60 * 60 * 1000)
+    : null
+  const fundsReady = fundsReadyAt ? new Date() >= fundsReadyAt : false
+
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-xl font-bold mb-6">Earnings</h1>
@@ -107,22 +117,27 @@ export default function EarningsPage() {
         <div className="bg-berkeley-blue text-white rounded-xl p-5">
           <p className="text-sm text-white/70">Available to cash out</p>
           <p className="text-3xl font-bold mt-1">{formatCents(pendingCents)}</p>
-          {hasPending && user.stripeAccountId && (
-            <Button
-              className="mt-3 bg-white text-berkeley-blue hover:bg-white/90 text-sm h-8 px-3"
-              onClick={handleCashout}
-              disabled={cashoutLoading}
-            >
-              {cashoutLoading ? 'Processing…' : 'Cash Out'}
-            </Button>
-          )}
           {hasPending && !user.stripeAccountId && (
             <Button
               className="mt-3 bg-white text-berkeley-blue hover:bg-white/90 text-sm h-8 px-3"
               onClick={handleConnect}
               disabled={connectLoading}
             >
-              {connectLoading ? 'Redirecting…' : 'Set Up to Cash Out'}
+              {connectLoading ? 'Redirecting…' : 'Set Up Payouts'}
+            </Button>
+          )}
+          {hasPending && user.stripeAccountId && !fundsReady && fundsReadyAt && (
+            <p className="mt-3 text-xs text-white/80">
+              Available to cash out {format(fundsReadyAt, 'MMM d')}
+            </p>
+          )}
+          {hasPending && user.stripeAccountId && fundsReady && (
+            <Button
+              className="mt-3 bg-white text-berkeley-blue hover:bg-white/90 text-sm h-8 px-3"
+              onClick={handleCashout}
+              disabled={cashoutLoading}
+            >
+              {cashoutLoading ? 'Processing…' : 'Cash Out'}
             </Button>
           )}
         </div>
