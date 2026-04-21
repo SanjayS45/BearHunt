@@ -21,8 +21,10 @@ export async function POST() {
       await prisma.user.update({ where: { id: user.id }, data: { stripeAccountId: accountId } })
     }
 
-    const baseUrl = process.env.NEXTAUTH_URL
-      ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+    const baseUrl =
+      process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : (process.env.NEXTAUTH_URL ?? 'http://localhost:3000')
 
     const accountLink = await stripe.accountLinks.create({
       account: accountId,

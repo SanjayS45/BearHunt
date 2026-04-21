@@ -3,9 +3,12 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { stripe } from '@/lib/stripe'
 
+// VERCEL_PROJECT_PRODUCTION_URL is the canonical production domain (no protocol), always present on Vercel.
+// Prefer it over NEXTAUTH_URL which may be set to http://localhost:3000 even in production.
 const BASE_URL =
-  process.env.NEXTAUTH_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : (process.env.NEXTAUTH_URL ?? 'http://localhost:3000')
 
 export async function POST() {
   try {
