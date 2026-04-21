@@ -20,6 +20,7 @@ interface Data {
   pendingCents: number
   completedCents: number
   fundsAvailableAt: string | null
+  bankArrivalAt: string | null
 }
 
 export default function EarningsPage() {
@@ -85,11 +86,12 @@ export default function EarningsPage() {
 
   if (!data) return <div className="max-w-2xl mx-auto py-12 text-center text-fog">Loading…</div>
 
-  const { user, pending, completed, pendingCents, completedCents, fundsAvailableAt } = data
+  const { user, pending, completed, pendingCents, completedCents, fundsAvailableAt, bankArrivalAt } = data
   const hasPending = pendingCents > 0
 
   const fundsReadyAt = fundsAvailableAt ? new Date(fundsAvailableAt) : null
   const fundsReady = fundsReadyAt ? new Date() >= fundsReadyAt : false
+  const bankArrivalDate = bankArrivalAt ? new Date(bankArrivalAt) : null
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -120,9 +122,9 @@ export default function EarningsPage() {
               {connectLoading ? 'Redirecting…' : 'Set Up Payouts'}
             </Button>
           )}
-          {hasPending && user.stripeAccountId && !fundsReady && fundsReadyAt && (
+          {hasPending && user.stripeAccountId && !fundsReady && bankArrivalDate && (
             <p className="mt-3 text-xs text-white/80">
-              Available to cash out {format(fundsReadyAt, 'MMM d')}
+              Arrives in your bank {format(bankArrivalDate, 'MMM d')}
             </p>
           )}
           {hasPending && user.stripeAccountId && fundsReady && (

@@ -3,6 +3,17 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { stripe } from '@/lib/stripe'
 
+function addBusinessDays(date: Date, days: number): Date {
+  const result = new Date(date)
+  let added = 0
+  while (added < days) {
+    result.setDate(result.getDate() + 1)
+    const day = result.getDay()
+    if (day !== 0 && day !== 6) added++
+  }
+  return result
+}
+
 export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -25,6 +36,7 @@ export async function GET() {
   // fundsAvailableAt is the latest date across all pending transactions —
   // cashout is only possible once all funds have settled.
   let fundsAvailableAt: string | null = null
+  let bankArrivalAt: string | null = null
   if (pending.length > 0) {
     const availableDates = await Promise.all(
       pending.map(async t => {
@@ -47,6 +59,7 @@ export async function GET() {
     )
     const maxDate = availableDates.reduce((a, b) => (a > b ? a : b))
     fundsAvailableAt = maxDate.toISOString()
+    bankArrivalAt = addBusinessDays(maxDate, 2).toISOString()
   }
 
   return NextResponse.json({
@@ -56,5 +69,6 @@ export async function GET() {
     pendingCents: pending.reduce((s, t) => s + t.amountCents, 0),
     completedCents: completed.reduce((s, t) => s + t.amountCents, 0),
     fundsAvailableAt,
+    bankArrivalAt,
   })
 }
