@@ -122,9 +122,9 @@ export default function EarningsPage() {
               {connectLoading ? 'Redirecting…' : 'Set Up Payouts'}
             </Button>
           )}
-          {hasPending && user.stripeAccountId && !fundsReady && bankArrivalDate && (
+          {hasPending && user.stripeAccountId && !fundsReady && fundsReadyAt && (
             <p className="mt-3 text-xs text-white/80">
-              Arrives in your bank {format(bankArrivalDate, 'MMM d')}
+              Cash out available {format(fundsReadyAt, 'MMM d')}
             </p>
           )}
           {hasPending && user.stripeAccountId && fundsReady && (
