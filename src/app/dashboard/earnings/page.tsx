@@ -19,6 +19,7 @@ interface Data {
   completed: Transaction[]
   pendingCents: number
   completedCents: number
+  fundsAvailableAt: string | null
 }
 
 export default function EarningsPage() {
@@ -84,17 +85,10 @@ export default function EarningsPage() {
 
   if (!data) return <div className="max-w-2xl mx-auto py-12 text-center text-fog">Loading…</div>
 
-  const { user, pending, completed, pendingCents, completedCents } = data
+  const { user, pending, completed, pendingCents, completedCents, fundsAvailableAt } = data
   const hasPending = pendingCents > 0
 
-  // Funds take 1-2 business days to settle on the platform after a bounty is confirmed.
-  // Block cashout until 2 days after the most recent pending transaction was created.
-  const latestPending = pending.length > 0
-    ? pending.reduce((a, b) => new Date(a.createdAt) > new Date(b.createdAt) ? a : b)
-    : null
-  const fundsReadyAt = latestPending
-    ? new Date(new Date(latestPending.createdAt).getTime() + 2 * 24 * 60 * 60 * 1000)
-    : null
+  const fundsReadyAt = fundsAvailableAt ? new Date(fundsAvailableAt) : null
   const fundsReady = fundsReadyAt ? new Date() >= fundsReadyAt : false
 
   return (
