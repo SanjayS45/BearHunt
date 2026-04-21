@@ -73,6 +73,8 @@ export default function EarningsPage() {
           window.location.href = d.onboardingUrl
           return
         }
+        // Reload so if stripeAccountId was cleared server-side, the setup button appears
+        await load()
       }
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Network error', 'error')
