@@ -16,6 +16,7 @@ export async function POST() {
         type: 'express',
         email: user.email,
         capabilities: { transfers: { requested: true } },
+        business_profile: { url: 'https://bearhunt.vercel.app' },
       })
       accountId = account.id
       await prisma.user.update({ where: { id: user.id }, data: { stripeAccountId: accountId } })
