@@ -56,17 +56,26 @@ export default function EarningsPage() {
 
   async function handleCashout() {
     setCashoutLoading(true)
-    const res = await fetch('/api/users/me/cashout', { method: 'POST' })
-    const d = await res.json()
-    if (res.ok) {
-      toast(`${formatCents(d.transferredCents)} sent! Opening Stripe…`, 'success')
-      if (d.dashboardUrl) {
-        window.location.href = d.dashboardUrl
-        return
+    try {
+      const res = await fetch('/api/users/me/cashout', { method: 'POST' })
+      const d = await res.json()
+      if (res.ok) {
+        toast(`${formatCents(d.transferredCents)} sent! Opening Stripe…`, 'success')
+        if (d.dashboardUrl) {
+          window.location.href = d.dashboardUrl
+          return
+        }
+        load()
+      } else {
+        toast(d.error ?? 'Cash out failed', 'error')
+        // Redirect to Stripe onboarding if capability is incomplete
+        if (d.onboardingUrl) {
+          window.location.href = d.onboardingUrl
+          return
+        }
       }
-      load()
-    } else {
-      toast(d.error ?? 'Cash out failed', 'error')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Network error', 'error')
     }
     setCashoutLoading(false)
   }

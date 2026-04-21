@@ -3,6 +3,10 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { stripe } from '@/lib/stripe'
 
+const BASE_URL =
+  process.env.NEXTAUTH_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
 export async function POST() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -11,6 +15,26 @@ export async function POST() {
 
   if (!user.stripeAccountId) {
     return NextResponse.json({ error: 'Set up payouts first before cashing out' }, { status: 400 })
+  }
+
+  // Verify transfers capability is active before attempting any transfer
+  const account = await stripe.accounts.retrieve(user.stripeAccountId)
+  const transfersStatus = account.capabilities?.transfers
+  if (transfersStatus !== 'active') {
+    const accountLink = await stripe.accountLinks.create({
+      account: user.stripeAccountId,
+      refresh_url: `${BASE_URL}/dashboard/earnings?connect=refresh`,
+      return_url: `${BASE_URL}/dashboard/earnings?connect=success`,
+      type: 'account_onboarding',
+    })
+    return NextResponse.json(
+      {
+        error: 'Your payout account setup is incomplete. Finish Stripe onboarding to enable transfers.',
+        onboardingUrl: accountLink.url,
+        capabilityStatus: transfersStatus ?? 'inactive',
+      },
+      { status: 400 }
+    )
   }
 
   const pending = await prisma.transaction.findMany({
@@ -38,9 +62,10 @@ export async function POST() {
   } catch (e: unknown) {
     const stripeErr = e as { type?: string; code?: string; message?: string }
     if (stripeErr.code === 'insufficient_funds' || stripeErr.message?.includes('insufficient')) {
-      return NextResponse.json({
-        error: 'Funds are still settling (typically 1–2 business days after the bounty is confirmed). Please try again shortly.',
-      }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Funds are still settling (typically 1–2 business days after the bounty is confirmed). Please try again shortly.' },
+        { status: 400 }
+      )
     }
     return NextResponse.json({ error: stripeErr.message ?? 'Transfer failed' }, { status: 400 })
   }
