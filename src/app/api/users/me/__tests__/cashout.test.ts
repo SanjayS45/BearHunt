@@ -5,11 +5,12 @@ const mockAuth = vi.fn()
 vi.mock('@/auth', () => ({ auth: mockAuth }))
 
 const mockUserFindUniqueOrThrow = vi.fn()
+const mockUserUpdateCashout = vi.fn()
 const mockTransactionFindMany = vi.fn()
 const mockTransactionUpdate = vi.fn()
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    user: { findUniqueOrThrow: mockUserFindUniqueOrThrow },
+    user: { findUniqueOrThrow: mockUserFindUniqueOrThrow, update: mockUserUpdateCashout },
     transaction: { findMany: mockTransactionFindMany, update: mockTransactionUpdate },
   },
 }))
@@ -18,6 +19,7 @@ const mockAccountsRetrieve = vi.fn()
 const mockAccountLinksCreate = vi.fn()
 const mockAccountsCreateLoginLink = vi.fn()
 const mockTransfersCreate = vi.fn()
+const mockUserUpdate = vi.fn()
 vi.mock('@/lib/stripe', () => ({
   stripe: {
     accounts: {
@@ -70,6 +72,21 @@ describe('POST /api/users/me/cashout', () => {
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/set up payouts/i)
+  })
+
+  it('returns 400 and clears stripeAccountId when account does not exist in Stripe (test-mode stale ID)', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
+    mockUserFindUniqueOrThrow.mockResolvedValue({ id: 'user-1', stripeAccountId: 'acct_test_stale' })
+    mockAccountsRetrieve.mockRejectedValue({ code: 'resource_missing', message: 'No such account: acct_test_stale' })
+    mockUserUpdateCashout.mockResolvedValue({})
+
+    const res = await POST()
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/no longer valid/i)
+    expect(mockUserUpdateCashout).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'user-1' }, data: { stripeAccountId: null } })
+    )
   })
 
   it('returns 400 with onboardingUrl when transfers capability is not active', async () => {
