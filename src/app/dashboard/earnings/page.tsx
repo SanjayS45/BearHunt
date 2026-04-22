@@ -112,7 +112,7 @@ export default function EarningsPage() {
       {hasPending && pendingCents < 1000 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
           <p className="text-sm font-medium text-warning mb-1">We recommend waiting until you have at least $10</p>
-          <p className="text-xs text-slate">A minimum $1.50 platform fee applies to every cashout. Cashing out small amounts means a larger portion goes to fees — waiting until you've accumulated $10 or more gets you the most out of your earnings.</p>
+          <p className="text-xs text-slate">A minimum $1.50 platform fee applies to every cashout. Cashing out small amounts means a larger portion goes to fees &mdash; waiting until you&apos;ve accumulated $10 or more gets you the most out of your earnings.</p>
         </div>
       )}
 
