@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { Send, AlertCircle } from 'lucide-react'
+import { Send } from 'lucide-react'
 import { Button } from './ui/button'
 import { BountyBadge } from './BountyBadge'
 import { toast } from '@/hooks/use-toast'
@@ -166,19 +166,9 @@ export function ChatWindow({ thread, currentUserId, initialMessages }: ChatWindo
           <Button onClick={confirmReceipt} disabled={confirming} className="flex-1 bg-success hover:bg-green-600">
             {confirming ? 'Confirming…' : 'I Got My Item ✓'}
           </Button>
-          <Button variant="ghost" onClick={openDispute} className="text-danger">
-            <AlertCircle size={16} strokeWidth={1.5} />
-          </Button>
         </div>
       )}
 
-      {!isOwner && (
-        <div className="bg-snow border-x border-mist px-4 py-2 flex justify-end">
-          <button onClick={openDispute} className="text-xs text-fog hover:text-danger transition-colors flex items-center gap-1">
-            <AlertCircle size={12} strokeWidth={1.5} /> Report issue
-          </button>
-        </div>
-      )}
 
       {/* Input */}
       <form onSubmit={sendMessage} className="bg-white border border-mist rounded-b-xl p-3 flex gap-2">
