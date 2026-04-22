@@ -128,13 +128,16 @@ export default function EarningsPage() {
             </p>
           )}
           {hasPending && user.stripeAccountId && fundsReady && (
-            <Button
-              className="mt-3 bg-white text-berkeley-blue hover:bg-white/90 text-sm h-8 px-3"
-              onClick={handleCashout}
-              disabled={cashoutLoading}
-            >
-              {cashoutLoading ? 'Processing…' : 'Cash Out'}
-            </Button>
+            <>
+              <Button
+                className="mt-3 bg-white text-berkeley-blue hover:bg-white/90 text-sm h-8 px-3"
+                onClick={handleCashout}
+                disabled={cashoutLoading}
+              >
+                {cashoutLoading ? 'Processing…' : 'Cash Out'}
+              </Button>
+              <p className="mt-2 text-xs text-white/60">Takes 1–3 minutes to process</p>
+            </>
           )}
         </div>
         <div className="bg-white border border-mist rounded-xl p-5">
