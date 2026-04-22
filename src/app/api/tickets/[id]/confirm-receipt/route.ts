@@ -23,8 +23,8 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   if (!ticket.owner.stripeCustomerId) return NextResponse.json({ error: 'No payment method on file' }, { status: 400 })
 
   const finder = ticket.approvedClaim.finder
-  const finderPayout = Math.floor(ticket.bountyAmountCents * 0.85)
-  const platformFee = ticket.bountyAmountCents - finderPayout
+  const platformFee = Math.max(150, Math.floor(ticket.bountyAmountCents * 0.15))
+  const finderPayout = ticket.bountyAmountCents - platformFee
 
   const setupIntent = await stripe.setupIntents.retrieve(ticket.stripePaymentIntentId!)
   const paymentMethodId = typeof setupIntent.payment_method === 'string'
