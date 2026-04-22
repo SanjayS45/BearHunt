@@ -3,10 +3,6 @@ import { useState, useRef, useEffect } from 'react'
 import { MapPin } from 'lucide-react'
 import { Label } from './ui/label'
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
-const PROXIMITY = '-122.2595,37.8719'
-const BBOX = '-122.2720,37.8650,-122.2470,37.8820'
-
 interface Feature {
   id: string
   properties: { full_address: string; name: string }
@@ -47,11 +43,11 @@ export function LocationInput({
     if (text.length < 2) { setSuggestions([]); setOpen(false); return }
     debounce.current = setTimeout(async () => {
       try {
-        const url = `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(text)}&proximity=${PROXIMITY}&bbox=${BBOX}&types=poi,address,neighborhood,place&access_token=${MAPBOX_TOKEN}`
-        const res = await fetch(url)
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(text)}`)
         const data = await res.json()
-        setSuggestions(data.features ?? [])
-        setOpen((data.features ?? []).length > 0)
+        const features: Feature[] = data.features ?? []
+        setSuggestions(features)
+        setOpen(features.length > 0)
       } catch { /* ignore */ }
     }, 300)
   }

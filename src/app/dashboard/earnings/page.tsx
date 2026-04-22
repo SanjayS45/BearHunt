@@ -27,6 +27,7 @@ export default function EarningsPage() {
   const [data, setData] = useState<Data | null>(null)
   const [connectLoading, setConnectLoading] = useState(false)
   const [cashoutLoading, setCashoutLoading] = useState(false)
+  const [now, setNow] = useState(() => new Date())
 
   async function load() {
     const res = await fetch('/api/users/me/earnings', { cache: 'no-store' })
@@ -39,6 +40,12 @@ export default function EarningsPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  // Tick every 30s so the Cash Out button appears exactly when funds become available
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30_000)
+    return () => clearInterval(t)
+  }, [])
 
   async function handleConnect() {
     setConnectLoading(true)
@@ -90,7 +97,7 @@ export default function EarningsPage() {
   const hasPending = pendingCents > 0
 
   const fundsReadyAt = fundsAvailableAt ? new Date(fundsAvailableAt) : null
-  const fundsReady = fundsReadyAt ? new Date() >= fundsReadyAt : false
+  const fundsReady = fundsReadyAt ? now >= fundsReadyAt : false
   const bankArrivalDate = bankArrivalAt ? new Date(bankArrivalAt) : null
 
   return (
