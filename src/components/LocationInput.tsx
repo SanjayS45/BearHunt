@@ -9,8 +9,8 @@ const BBOX = '-122.2720,37.8650,-122.2470,37.8820'
 
 interface Feature {
   id: string
-  place_name: string
-  center: [number, number]
+  properties: { full_address: string; name: string }
+  geometry: { coordinates: [number, number] }
 }
 
 interface LocationInputProps {
@@ -47,18 +47,18 @@ export function LocationInput({
     if (text.length < 2) { setSuggestions([]); setOpen(false); return }
     debounce.current = setTimeout(async () => {
       try {
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(text)}.json?proximity=${PROXIMITY}&bbox=${BBOX}&types=poi,address,neighborhood,place&access_token=${MAPBOX_TOKEN}`
+        const url = `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(text)}&proximity=${PROXIMITY}&bbox=${BBOX}&types=poi,address,neighborhood,place&access_token=${MAPBOX_TOKEN}`
         const res = await fetch(url)
         const data = await res.json()
         setSuggestions(data.features ?? [])
-        setOpen(true)
+        setOpen((data.features ?? []).length > 0)
       } catch { /* ignore */ }
     }, 300)
   }
 
   function select(feature: Feature) {
-    const [lng, lat] = feature.center
-    onChange(feature.place_name, lat, lng)
+    const [lng, lat] = feature.geometry.coordinates
+    onChange(feature.properties.full_address ?? feature.properties.name, lat, lng)
     setSuggestions([])
     setOpen(false)
   }
@@ -84,7 +84,7 @@ export function LocationInput({
                 className="flex items-start gap-2 px-3 py-2.5 text-sm text-ink hover:bg-snow cursor-pointer border-b border-mist last:border-0"
               >
                 <MapPin size={13} strokeWidth={1.5} className="text-fog mt-0.5 flex-shrink-0" />
-                <span className="leading-tight">{f.place_name}</span>
+                <span className="leading-tight">{f.properties.full_address ?? f.properties.name}</span>
               </li>
             ))}
           </ul>
