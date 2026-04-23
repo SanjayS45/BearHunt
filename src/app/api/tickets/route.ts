@@ -69,8 +69,18 @@ export async function POST(request: Request) {
 
     const { description, category, generalArea, lostAt, bountyAmountCents, referencePhotoUrl } = parsed.data
 
-    // Ensure Stripe customer exists
+    // Ensure Stripe customer exists (clear stale test-mode IDs if needed)
     let user = await prisma.user.findUniqueOrThrow({ where: { id: session.user.id } })
+    if (user.stripeCustomerId) {
+      try {
+        await stripe.customers.retrieve(user.stripeCustomerId)
+      } catch (e: unknown) {
+        const stripeErr = e as { code?: string; message?: string }
+        if (stripeErr.code === 'resource_missing' || stripeErr.message?.includes('No such customer')) {
+          user = await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: null } })
+        } else throw e
+      }
+    }
     if (!user.stripeCustomerId) {
       const customer = await stripe.customers.create({ email: user.email, name: user.name ?? undefined })
       user = await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer.id } })
