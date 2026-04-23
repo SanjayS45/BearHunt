@@ -116,7 +116,7 @@ describe('POST /api/users/me/stripe-connect', () => {
 
   it('uses VERCEL_PROJECT_PRODUCTION_URL when available', async () => {
     delete process.env.NEXTAUTH_URL
-    process.env.VERCEL_PROJECT_PRODUCTION_URL = 'bearhunt.vercel.app'
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = 'bearhunt.online'
 
     mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
     mockUserFindUniqueOrThrow.mockResolvedValue({
@@ -130,7 +130,7 @@ describe('POST /api/users/me/stripe-connect', () => {
 
     expect(mockAccountLinksCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        refresh_url: 'https://bearhunt.vercel.app/dashboard/earnings?connect=refresh',
+        refresh_url: 'https://bearhunt.online/dashboard/earnings?connect=refresh',
       })
     )
 

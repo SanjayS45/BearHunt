@@ -7,6 +7,14 @@ import { Toaster } from '@/components/Toaster'
 export const metadata: Metadata = {
   title: 'BearHunt — UC Berkeley Lost & Found',
   description: 'Bounty-based lost and found for UC Berkeley students.',
+  metadataBase: new URL('https://bearhunt.online'),
+  openGraph: {
+    title: 'BearHunt — UC Berkeley Lost & Found',
+    description: 'Bounty-based lost and found for UC Berkeley students.',
+    url: 'https://bearhunt.online',
+    images: [{ url: '/logo.png' }],
+  },
+  icons: { icon: '/logo.png', apple: '/logo.png' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

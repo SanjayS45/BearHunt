@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { auth } from '@/auth'
 import { NotificationBell } from './NotificationBell'
 
@@ -8,9 +9,9 @@ export async function Header() {
   return (
     <header className="sticky top-0 z-30 bg-berkeley-blue text-white shadow-sm">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight flex items-center gap-2">
-          <span className="text-gold">🐻</span>
-          BearHunt
+        <Link href="/" className="flex items-center gap-2">
+          <Image src="/logo.png" alt="BearHunt" width={32} height={32} className="rounded" />
+          <span className="font-bold text-lg tracking-tight">BearHunt</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-1">
