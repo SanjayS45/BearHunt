@@ -54,47 +54,55 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const session = await auth()
+    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const allowed = await checkTicketRateLimit(session.user.id)
-  if (!allowed) return NextResponse.json({ error: 'Rate limit: max 5 tickets per day' }, { status: 429 })
+    const allowed = await checkTicketRateLimit(session.user.id)
+    if (!allowed) return NextResponse.json({ error: 'Rate limit: max 5 tickets per day' }, { status: 429 })
 
-  const body = await request.json()
-  const parsed = createSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
+    const body = await request.json().catch(() => null)
+    if (!body) return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
 
-  const { description, category, generalArea, lostAt, bountyAmountCents, referencePhotoUrl } = parsed.data
+    const parsed = createSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
 
-  // Ensure Stripe customer exists
-  let user = await prisma.user.findUniqueOrThrow({ where: { id: session.user.id } })
-  if (!user.stripeCustomerId) {
-    const customer = await stripe.customers.create({ email: user.email, name: user.name ?? undefined })
-    user = await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer.id } })
+    const { description, category, generalArea, lostAt, bountyAmountCents, referencePhotoUrl } = parsed.data
+
+    // Ensure Stripe customer exists
+    let user = await prisma.user.findUniqueOrThrow({ where: { id: session.user.id } })
+    if (!user.stripeCustomerId) {
+      const customer = await stripe.customers.create({ email: user.email, name: user.name ?? undefined })
+      user = await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer.id } })
+    }
+
+    // SetupIntent: saves card for later charge, does NOT charge now
+    const setupIntent = await stripe.setupIntents.create({
+      customer: user.stripeCustomerId!,
+      usage: 'off_session',
+      metadata: { type: 'bounty_setup' },
+    })
+
+    const filedAt = new Date()
+    const ticket = await prisma.ticket.create({
+      data: {
+        ownerId: session.user.id,
+        category,
+        description,
+        generalArea,
+        lostAt: new Date(lostAt),
+        referencePhotoUrl: referencePhotoUrl || null,
+        bountyAmountCents,
+        stripePaymentIntentId: setupIntent.id,
+        filedAt,
+        expiresAt: addDays(filedAt, 30),
+      },
+    })
+
+    return NextResponse.json({ ticket, clientSecret: setupIntent.client_secret }, { status: 201 })
+  } catch (e: unknown) {
+    const err = e as { message?: string; code?: string }
+    console.error('[POST /api/tickets]', err)
+    return NextResponse.json({ error: err.message ?? 'Failed to create ticket' }, { status: 500 })
   }
-
-  // SetupIntent: saves card for later charge, does NOT charge now
-  const setupIntent = await stripe.setupIntents.create({
-    customer: user.stripeCustomerId!,
-    usage: 'off_session',
-    metadata: { type: 'bounty_setup' },
-  })
-
-  const filedAt = new Date()
-  const ticket = await prisma.ticket.create({
-    data: {
-      ownerId: session.user.id,
-      category,
-      description,
-      generalArea,
-      lostAt: new Date(lostAt),
-      referencePhotoUrl,
-      bountyAmountCents,
-      stripePaymentIntentId: setupIntent.id, // stores SetupIntent ID
-      filedAt,
-      expiresAt: addDays(filedAt, 30),
-    },
-  })
-
-  return NextResponse.json({ ticket, clientSecret: setupIntent.client_secret }, { status: 201 })
 }
