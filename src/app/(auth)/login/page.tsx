@@ -1,6 +1,13 @@
 import { signIn } from '@/auth'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
+import Image from 'next/image'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Sign In | BearHunt',
+  description: 'Sign in with your @berkeley.edu account to use BearHunt, UC Berkeley\'s bounty-based lost & found.',
+}
 
 export default async function LoginPage() {
   const session = await auth()
@@ -10,7 +17,7 @@ export default async function LoginPage() {
     <div className="min-h-[70vh] flex items-center justify-center">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🐻</div>
+          <Image src="/logo.png" alt="BearHunt" width={80} height={80} className="mx-auto mb-3" />
           <h1 className="text-2xl font-bold text-ink">BearHunt</h1>
           <p className="text-slate mt-1">UC Berkeley Lost &amp; Found</p>
         </div>

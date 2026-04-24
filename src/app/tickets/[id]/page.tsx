@@ -11,6 +11,21 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { CategoryIcon } from '@/components/CategoryIcon'
 import { categoryLabel } from '@/lib/utils'
 import { TicketActions } from '@/components/TicketActions'
+import type { Metadata } from 'next'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const ticket = await prisma.ticket.findUnique({ where: { id }, select: { description: true, generalArea: true, bountyAmountCents: true, category: true } })
+  if (!ticket) return {}
+  const bounty = `$${(ticket.bountyAmountCents / 100).toFixed(0)}`
+  const title = `${ticket.description} — ${bounty} bounty | BearHunt`
+  const description = `Lost ${categoryLabel(ticket.category)} near ${ticket.generalArea}. ${bounty} bounty offered. Help find it on BearHunt, UC Berkeley's lost & found.`
+  return {
+    title,
+    description,
+    openGraph: { title, description, url: `https://bearhunt.online/tickets/${id}`, images: [{ url: '/logo.png' }] },
+  }
+}
 
 export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -37,8 +52,19 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
       })
     : null
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LostAction',
+    name: ticket.description,
+    description: `Lost ${categoryLabel(ticket.category)} near ${ticket.generalArea}.`,
+    location: { '@type': 'Place', name: ticket.generalArea },
+    startTime: ticket.lostAt,
+    url: `https://bearhunt.online/tickets/${ticket.id}`,
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-4">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-snow border border-mist flex items-center justify-center text-slate">
