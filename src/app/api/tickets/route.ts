@@ -6,6 +6,7 @@ import { checkTicketRateLimit } from '@/lib/ratelimit'
 import { z } from 'zod'
 import { addDays } from 'date-fns'
 import type { ItemCategory } from '@prisma/client'
+import { moderateText } from '@/lib/moderation'
 
 const createSchema = z.object({
   description: z.string().min(1).max(500),
@@ -68,6 +69,11 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
 
     const { description, category, generalArea, lostAt, bountyAmountCents, referencePhotoUrl } = parsed.data
+
+    const moderation = await moderateText(description)
+    if (!moderation.allowed) {
+      return NextResponse.json({ error: moderation.reason ?? 'Inappropriate content.' }, { status: 400 })
+    }
 
     // Ensure Stripe customer exists (clear stale test-mode IDs if needed)
     let user = await prisma.user.findUniqueOrThrow({ where: { id: session.user.id } })
