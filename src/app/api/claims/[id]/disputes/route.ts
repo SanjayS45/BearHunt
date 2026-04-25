@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
 import { sendDisputeNotification } from '@/lib/email'
 import { z } from 'zod'
+import { moderateText } from '@/lib/moderation'
 
 const schema = z.object({ reason: z.string().min(10).max(1000) })
 
@@ -24,6 +25,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const body = await request.json()
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
+
+  const moderation = await moderateText(parsed.data.reason)
+  if (!moderation.allowed) return NextResponse.json({ error: moderation.reason ?? 'Inappropriate content.' }, { status: 400 })
 
   const dispute = await prisma.dispute.create({
     data: { claimId: id, openedById: session.user.id, reason: parsed.data.reason },

@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
     const { description, category, generalArea, lostAt, bountyAmountCents, referencePhotoUrl } = parsed.data
 
-    const moderation = await moderateText(description)
+    const moderation = await moderateText(`${description} ${generalArea}`)
     if (!moderation.allowed) {
       return NextResponse.json({ error: moderation.reason ?? 'Inappropriate content.' }, { status: 400 })
     }

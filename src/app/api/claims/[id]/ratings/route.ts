@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { moderateText } from '@/lib/moderation'
 
 const schema = z.object({
   score: z.number().int().min(1).max(5),
@@ -28,6 +29,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const body = await request.json()
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
+
+  if (parsed.data.comment) {
+    const moderation = await moderateText(parsed.data.comment)
+    if (!moderation.allowed) return NextResponse.json({ error: moderation.reason ?? 'Inappropriate content.' }, { status: 400 })
+  }
 
   const rating = await prisma.rating.create({
     data: { claimId: id, raterId: session.user.id, ratedId, ...parsed.data },
