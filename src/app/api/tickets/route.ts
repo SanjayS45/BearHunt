@@ -92,14 +92,8 @@ export async function POST(request: Request) {
       user = await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer.id } })
     }
 
-    // SetupIntent: saves card for later charge, does NOT charge now
-    const setupIntent = await stripe.setupIntents.create({
-      customer: user.stripeCustomerId!,
-      usage: 'off_session',
-      metadata: { type: 'bounty_setup' },
-    })
-
     const filedAt = new Date()
+    // Create ticket as pending_payment — activated by webhook once card is saved
     const ticket = await prisma.ticket.create({
       data: {
         ownerId: session.user.id,
@@ -109,10 +103,22 @@ export async function POST(request: Request) {
         lostAt: new Date(lostAt),
         referencePhotoUrl: referencePhotoUrl || null,
         bountyAmountCents,
-        stripePaymentIntentId: setupIntent.id,
         filedAt,
-        expiresAt: addDays(filedAt, 30),
+        status: 'pending_payment',
+        expiresAt: addDays(filedAt, 1), // short TTL; webhook extends to 30 days on success
       },
+    })
+
+    // SetupIntent: saves card for later charge, does NOT charge now
+    const setupIntent = await stripe.setupIntents.create({
+      customer: user.stripeCustomerId!,
+      usage: 'off_session',
+      metadata: { type: 'bounty_setup', ticketId: ticket.id },
+    })
+
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { stripePaymentIntentId: setupIntent.id },
     })
 
     return NextResponse.json({ ticket, clientSecret: setupIntent.client_secret }, { status: 201 })

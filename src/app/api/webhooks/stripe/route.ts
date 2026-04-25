@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
+import { addDays } from 'date-fns'
 
 export async function POST(request: Request) {
   const body = await request.text()
@@ -17,6 +18,23 @@ export async function POST(request: Request) {
   }
 
   switch (event.type) {
+    case 'setup_intent.succeeded': {
+      const si = event.data.object
+      if (si.metadata?.type === 'bounty_setup' && si.metadata.ticketId) {
+        await prisma.ticket.update({
+          where: { id: si.metadata.ticketId },
+          data: { status: 'active', expiresAt: addDays(new Date(), 30) },
+        })
+      }
+      break
+    }
+    case 'setup_intent.canceled': {
+      const si = event.data.object
+      if (si.metadata?.type === 'bounty_setup' && si.metadata.ticketId) {
+        await prisma.ticket.delete({ where: { id: si.metadata.ticketId } })
+      }
+      break
+    }
     case 'payment_intent.succeeded': {
       const pi = event.data.object
       // Handle successful bounty capture (triggered from confirm-receipt)
