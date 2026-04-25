@@ -18,6 +18,7 @@ export async function checkTicketRateLimit(ownerId: string): Promise<boolean> {
     where: {
       ownerId,
       createdAt: { gte: today },
+      status: { not: 'pending_payment' },
     },
   })
   return count < 5
