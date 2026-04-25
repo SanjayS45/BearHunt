@@ -105,7 +105,13 @@ export default function NewTicketPage() {
         <h1 className="text-xl font-bold mb-1">Save Payment Method</h1>
         <p className="text-slate text-sm mb-6">Your card will be saved but <strong>not charged</strong> until you confirm you&apos;ve received your item. Bounty: <strong>{formatCents(form.bountyAmountCents)}</strong>.</p>
         <div className="bg-white rounded-xl border border-mist p-5">
-          <PaymentForm clientSecret={clientSecret} onSuccess={() => router.push(`/tickets/${ticketId}`)} />
+          <PaymentForm
+          clientSecret={clientSecret}
+          onSuccess={async () => {
+            await fetch(`/api/tickets/${ticketId}/activate`, { method: 'POST' })
+            router.push(`/tickets/${ticketId}`)
+          }}
+        />
         </div>
       </div>
     )
