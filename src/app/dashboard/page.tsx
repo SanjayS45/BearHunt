@@ -24,7 +24,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     prisma.claim.findMany({
       where: { finderId: session.user.id },
       include: {
-        ticket: { select: { id: true, description: true, bountyAmountCents: true, category: true, generalArea: true } },
+        ticket: { select: { id: true, description: true, bountyAmountCents: true, category: true, generalArea: true, referencePhotoUrl: true } },
       },
       orderBy: { foundAt: 'desc' },
     }),
@@ -91,13 +91,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             myClaims.map(claim => (
               <Link key={claim.id} href={`/tickets/${claim.ticket.id}`} className="block">
                 <div className="bg-white rounded-xl border border-mist p-4 hover:border-berkeley-blue/40 transition-colors">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    {claim.ticket.referencePhotoUrl ? (
+                      <img
+                        src={`/api/photo?path=${claim.ticket.referencePhotoUrl}&bucket=reference-photos`}
+                        alt="Reference"
+                        className="flex-shrink-0 w-14 h-14 rounded-lg object-cover border border-mist"
+                      />
+                    ) : null}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm text-ink truncate">{claim.ticket.description}</p>
                       <p className="text-xs text-fog mt-0.5">{claim.ticket.generalArea}</p>
                       <p className="text-xs text-fog">{formatDistanceToNow(new Date(claim.foundAt), { addSuffix: true })}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5">
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                       <BountyBadge cents={claim.ticket.bountyAmountCents} size="sm" />
                       <StatusBadge status={claim.status} />
                     </div>

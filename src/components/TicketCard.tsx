@@ -18,9 +18,17 @@ export function TicketCard({ ticket }: TicketCardProps) {
       <Card className="hover:border-berkeley-blue/40 transition-colors">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-snow border border-mist flex items-center justify-center text-slate">
-              <CategoryIcon category={ticket.category} size={20} />
-            </div>
+            {ticket.referencePhotoUrl ? (
+              <img
+                src={`/api/photo?path=${ticket.referencePhotoUrl}&bucket=reference-photos`}
+                alt="Reference"
+                className="flex-shrink-0 w-14 h-14 rounded-lg object-cover border border-mist"
+              />
+            ) : (
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-snow border border-mist flex items-center justify-center text-slate">
+                <CategoryIcon category={ticket.category} size={20} />
+              </div>
+            )}
 
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2 mb-1">
