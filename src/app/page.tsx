@@ -52,7 +52,7 @@ export default async function BountyBoardPage({
         <TicketFilters />
       </Suspense>
 
-      <div className="mt-4 space-y-3">
+      <div className="mt-4">
         {tickets.length === 0 ? (
           <div className="text-center py-16">
             <Search size={40} strokeWidth={1.5} className="mx-auto text-fog mb-3" />
@@ -60,7 +60,9 @@ export default async function BountyBoardPage({
             <p className="text-fog text-sm mt-1">Be the first to post a lost item!</p>
           </div>
         ) : (
-          tickets.map(ticket => <TicketCard key={ticket.id} ticket={ticket} />)
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {tickets.map(ticket => <TicketCard key={ticket.id} ticket={ticket} />)}
+          </div>
         )}
       </div>
 

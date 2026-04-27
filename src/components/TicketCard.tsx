@@ -1,61 +1,55 @@
+'use client'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { MapPin } from 'lucide-react'
-import { Card, CardContent } from './ui/card'
 import { BountyBadge } from './BountyBadge'
 import { StatusBadge } from './StatusBadge'
 import { CategoryIcon } from './CategoryIcon'
 import { categoryLabel } from '@/lib/utils'
 import type { TicketWithOwner } from '@/types'
 
-interface TicketCardProps {
-  ticket: TicketWithOwner
-}
-
-export function TicketCard({ ticket }: TicketCardProps) {
+export function TicketCard({ ticket }: { ticket: TicketWithOwner }) {
   return (
     <Link href={`/tickets/${ticket.id}`} className="block group">
-      <Card className="hover:border-berkeley-blue/40 transition-colors">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            {ticket.referencePhotoUrl ? (
-              <img
-                src={`/api/photo?path=${ticket.referencePhotoUrl}&bucket=reference-photos`}
-                alt="Reference"
-                className="flex-shrink-0 w-14 h-14 rounded-lg object-cover border border-mist"
-              />
-            ) : (
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-snow border border-mist flex items-center justify-center text-slate">
-                <CategoryIcon category={ticket.category} size={20} />
-              </div>
-            )}
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <p className="font-semibold text-ink text-sm leading-snug line-clamp-2 group-hover:text-berkeley-blue transition-colors">
-                  {ticket.description}
-                </p>
-                <BountyBadge cents={ticket.bountyAmountCents} size="sm" className="flex-shrink-0" />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fog mt-2">
-                <span className="flex items-center gap-1">
-                  <MapPin size={12} strokeWidth={1.5} />
-                  {ticket.generalArea}
-                </span>
-                <span>{categoryLabel(ticket.category)}</span>
-                <span>{formatDistanceToNow(new Date(ticket.filedAt), { addSuffix: true })}</span>
-              </div>
-
-              {ticket.status !== 'active' && (
-                <div className="mt-2">
-                  <StatusBadge status={ticket.status} />
-                </div>
-              )}
+      <div className="bg-white rounded-2xl border border-mist overflow-hidden hover:shadow-md hover:border-berkeley-blue/30 transition-all">
+        {/* Image area */}
+        <div className="relative w-full aspect-square bg-snow flex items-center justify-center overflow-hidden">
+          {ticket.referencePhotoUrl ? (
+            <img
+              src={`/api/photo?path=${ticket.referencePhotoUrl}&bucket=reference-photos`}
+              alt={ticket.description}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-fog">
+              <CategoryIcon category={ticket.category} size={40} />
+              <span className="text-xs font-medium">{categoryLabel(ticket.category)}</span>
             </div>
+          )}
+          <div className="absolute top-2 right-2">
+            <BountyBadge cents={ticket.bountyAmountCents} size="sm" />
           </div>
-        </CardContent>
-      </Card>
+          {ticket.status !== 'active' && (
+            <div className="absolute top-2 left-2">
+              <StatusBadge status={ticket.status} />
+            </div>
+          )}
+        </div>
+
+        {/* Info area */}
+        <div className="p-3">
+          <p className="font-semibold text-sm text-ink line-clamp-2 leading-snug group-hover:text-berkeley-blue transition-colors">
+            {ticket.description}
+          </p>
+          <div className="flex items-center gap-1 mt-1.5 text-xs text-fog">
+            <MapPin size={11} strokeWidth={1.5} className="flex-shrink-0" />
+            <span className="truncate">{ticket.generalArea}</span>
+          </div>
+          <p className="text-xs text-fog mt-0.5">
+            {formatDistanceToNow(new Date(ticket.filedAt), { addSuffix: true })}
+          </p>
+        </div>
+      </div>
     </Link>
   )
 }

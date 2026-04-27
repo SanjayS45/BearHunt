@@ -75,7 +75,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <Link href="/tickets/new" className="mt-3 inline-block text-sm text-berkeley-blue hover:underline">Post your first ticket →</Link>
             </div>
           ) : (
-            myTickets.map(ticket => <TicketCard key={ticket.id} ticket={ticket} />)
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {myTickets.map(ticket => <TicketCard key={ticket.id} ticket={ticket} />)}
+            </div>
           )}
         </div>
       )}
