@@ -30,9 +30,18 @@ export async function GET(request: Request) {
   const page = parseInt(searchParams.get('page') ?? '1')
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '20'), 50)
 
+  const q = searchParams.get('q')?.trim()
+
   const where: Record<string, unknown> = { status: 'active' }
   if (category) where.category = category
-  if (area) where.generalArea = { contains: area, mode: 'insensitive' }
+  if (q) {
+    where.OR = [
+      { description: { contains: q, mode: 'insensitive' } },
+      { generalArea: { contains: q, mode: 'insensitive' } },
+    ]
+  } else if (area) {
+    where.generalArea = { contains: area, mode: 'insensitive' }
+  }
   if (minBounty) where.bountyAmountCents = { ...((where.bountyAmountCents as object) ?? {}), gte: parseInt(minBounty) }
   if (maxBounty) where.bountyAmountCents = { ...((where.bountyAmountCents as object) ?? {}), lte: parseInt(maxBounty) }
 

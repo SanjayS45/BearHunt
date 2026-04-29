@@ -11,20 +11,61 @@ const CATEGORIES: ItemCategory[] = [
   'electronics','book','id_card','headphones','charger','other',
 ]
 
+const CATEGORY_KEYWORDS: Record<ItemCategory, string[]> = {
+  phone: ['phone', 'iphone', 'android', 'mobile', 'smartphone', 'pixel'],
+  wallet: ['wallet', 'purse', 'billfold', 'cards'],
+  keys: ['key', 'keys', 'keychain', 'keyring', 'fob'],
+  water_bottle: ['water bottle', 'bottle', 'hydro flask', 'hydroflask', 'nalgene', 'thermos'],
+  electronics: ['laptop', 'macbook', 'computer', 'tablet', 'ipad', 'calculator', 'camera'],
+  headphones: ['headphones', 'earbuds', 'airpods', 'earphones', 'buds'],
+  bag: ['bag', 'backpack', 'tote', 'duffel', 'satchel'],
+  charger: ['charger', 'cable', 'charging', 'adapter'],
+  book: ['book', 'textbook', 'notebook', 'binder', 'journal'],
+  id_card: ['id', 'student id', 'cal id', 'license', 'card', 'badge'],
+  clothing: ['jacket', 'hoodie', 'sweatshirt', 'shirt', 'sweater', 'coat', 'hat', 'cap', 'scarf', 'gloves', 'clothing'],
+  other: [],
+}
+
+function inferCategory(q: string): ItemCategory | null {
+  const lower = q.toLowerCase()
+  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS) as [ItemCategory, string[]][]) {
+    if (keywords.some(kw => lower.includes(kw))) return cat
+  }
+  return null
+}
+
 export default async function BountyBoardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; area?: string; min?: string; max?: string; sort?: string; page?: string }>
+  searchParams: Promise<{ category?: string; area?: string; q?: string; min?: string; max?: string; sort?: string; page?: string }>
 }) {
   const sp = await searchParams
   const page = parseInt(sp.page ?? '1')
   const limit = 20
   const category = sp.category as ItemCategory | undefined
   const sort = sp.sort ?? 'newest'
+  const q = sp.q?.trim()
 
   const where: Record<string, unknown> = { status: 'active' }
-  if (category && CATEGORIES.includes(category)) where.category = category
-  if (sp.area) where.generalArea = { contains: sp.area, mode: 'insensitive' }
+
+  if (category && CATEGORIES.includes(category)) {
+    where.category = category
+  }
+
+  if (q) {
+    const conditions: Record<string, unknown>[] = [
+      { description: { contains: q, mode: 'insensitive' } },
+      { generalArea: { contains: q, mode: 'insensitive' } },
+    ]
+    if (!category) {
+      const inferred = inferCategory(q)
+      if (inferred) conditions.push({ category: inferred })
+    }
+    where.OR = conditions
+  } else if (sp.area) {
+    where.generalArea = { contains: sp.area, mode: 'insensitive' }
+  }
+
   if (sp.min) where.bountyAmountCents = { ...((where.bountyAmountCents as object) ?? {}), gte: parseInt(sp.min) }
   if (sp.max) where.bountyAmountCents = { ...((where.bountyAmountCents as object) ?? {}), lte: parseInt(sp.max) }
 

@@ -53,21 +53,23 @@ export function TicketFilters() {
       </div>
 
       <div className="flex gap-2">
+        <input
+          key={params.get('q') ?? ''}
+          placeholder="Describe what you found..."
+          defaultValue={params.get('q') ?? ''}
+          onBlur={e => update('q', e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') update('q', (e.target as HTMLInputElement).value) }}
+          className="flex-1 h-9 rounded-lg border border-mist bg-white px-3 text-sm text-ink placeholder:text-fog focus:outline-none focus:border-berkeley-blue"
+        />
+
         <select
           value={params.get('sort') ?? 'newest'}
           onChange={e => update('sort', e.target.value)}
-          className="flex-1 h-9 rounded-lg border border-mist bg-white px-3 text-sm text-ink focus:outline-none focus:border-berkeley-blue"
+          className="h-9 rounded-lg border border-mist bg-white px-3 text-sm text-ink focus:outline-none focus:border-berkeley-blue"
         >
-          <option value="newest">Newest first</option>
+          <option value="newest">Newest</option>
           <option value="highest_bounty">Highest bounty</option>
         </select>
-
-        <input
-          placeholder="Search area..."
-          defaultValue={params.get('area') ?? ''}
-          onBlur={e => update('area', e.target.value)}
-          className="flex-1 h-9 rounded-lg border border-mist bg-white px-3 text-sm text-ink placeholder:text-fog focus:outline-none focus:border-berkeley-blue"
-        />
       </div>
     </div>
   )

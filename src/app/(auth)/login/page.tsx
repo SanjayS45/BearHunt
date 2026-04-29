@@ -14,12 +14,39 @@ export default async function LoginPage() {
   if (session) redirect('/')
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center">
-      <div className="w-full max-w-sm">
+    <div className="min-h-[70vh] flex items-center justify-center py-10">
+      <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Image src="/logo.png" alt="BearHunt" width={80} height={80} className="mx-auto mb-3" />
           <h1 className="text-2xl font-bold text-ink">BearHunt</h1>
-          <p className="text-slate mt-1">UC Berkeley Lost &amp; Found</p>
+          <p className="text-slate mt-1">UC Berkeley Lost &amp; Found — with bounties</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-mist p-6 shadow-sm mb-4">
+          <p className="text-xs font-semibold text-fog uppercase tracking-wider mb-4">How it works</p>
+          <ol className="space-y-3">
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-berkeley-blue/10 text-berkeley-blue text-xs font-bold flex items-center justify-center">1</span>
+              <div>
+                <p className="text-sm font-medium text-ink">Post a bounty</p>
+                <p className="text-xs text-slate mt-0.5">Lost something? Describe it, pick where you lost it, and set a reward ($2 minimum — you decide what it&apos;s worth).</p>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-berkeley-blue/10 text-berkeley-blue text-xs font-bold flex items-center justify-center">2</span>
+              <div>
+                <p className="text-sm font-medium text-ink">Finders hunt &amp; claim</p>
+                <p className="text-xs text-slate mt-0.5">Other students browse active bounties. If they spot your item, they submit a photo and location as proof.</p>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-berkeley-blue/10 text-berkeley-blue text-xs font-bold flex items-center justify-center">3</span>
+              <div>
+                <p className="text-sm font-medium text-ink">Meet up &amp; collect</p>
+                <p className="text-xs text-slate mt-0.5">You review the proof, approve the claim, and coordinate a handoff in-app. Once you confirm receipt, the finder gets paid.</p>
+              </div>
+            </li>
+          </ol>
         </div>
 
         <div className="bg-white rounded-xl border border-mist p-6 shadow-sm">
