@@ -80,15 +80,15 @@ export default async function LoginPage() {
           <ul className="mt-5 space-y-2.5 text-sm text-slate">
             <li className="flex items-start gap-2.5">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
-              Your card is saved but <strong className="text-ink">not charged</strong> until you confirm you got your item back
+              <span>Your card is saved but <span className="font-semibold text-ink">not charged</span> until you confirm you got your item back</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
-              Higher bounties get found faster — set what it&apos;s really worth to you
+              <span>Higher bounties get found faster — set what it&apos;s really worth to you</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
-              Bounty expires automatically after 30 days if unclaimed
+              <span>Bounty expires automatically after 30 days if unclaimed</span>
             </li>
           </ul>
         </div>
@@ -108,15 +108,15 @@ export default async function LoginPage() {
           <ul className="mt-5 space-y-2.5 text-sm text-slate">
             <li className="flex items-start gap-2.5">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
-              Finders search by description — &ldquo;blue backpack near Wheeler&rdquo; works
+              <span>Finders search by description — &ldquo;blue backpack near Wheeler&rdquo; works</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
-              Up to 5 proof photos submitted per claim
+              <span>Up to 5 proof photos submitted per claim</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
-              You review the proof and approve or reject — you&apos;re always in control
+              <span>You review the proof and approve or reject — you&apos;re always in control</span>
             </li>
           </ul>
         </div>
@@ -136,15 +136,15 @@ export default async function LoginPage() {
           <ul className="mt-5 space-y-2.5 text-sm text-slate">
             <li className="flex items-start gap-2.5">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
-              <strong className="text-ink">85%</strong> of the bounty goes directly to the finder
+              <span><span className="font-semibold text-ink">85%</span> of the bounty goes directly to the finder</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
-              Secure Stripe payouts to any bank account
+              <span>Secure Stripe payouts to any bank account</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
-              Built-in dispute system if something goes wrong
+              <span>Built-in dispute system if something goes wrong</span>
             </li>
           </ul>
         </div>
@@ -160,7 +160,7 @@ export default async function LoginPage() {
         <div className="flex justify-center mt-8">
           <div className="bg-white rounded-xl border border-mist p-6 shadow-sm w-full max-w-sm">
             <p className="text-sm text-slate text-center mb-5">
-              Sign in with your <strong>@berkeley.edu</strong> Google account to continue.
+              Sign in with your <span className="font-semibold text-ink">@berkeley.edu</span> Google account to continue.
             </p>
             <div className="flex justify-center">
               <SignInButton label="Continue with Google" />
