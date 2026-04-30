@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { auth } from '@/auth'
 import { NotificationBell } from './NotificationBell'
+import { SignInLink } from './SignInLink'
 
 export async function Header() {
   const session = await auth()
@@ -34,9 +35,7 @@ export async function Header() {
               )}
             </Link>
           ) : (
-            <Link href="/login" className="text-sm font-medium bg-white/10 hover:bg-white/20 transition-colors px-3 py-1.5 rounded-lg">
-              Sign in
-            </Link>
+            <SignInLink />
           )}
         </div>
       </div>
